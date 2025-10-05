@@ -1,0 +1,86 @@
+version: "3.8"
+
+networks:
+  web:
+
+volumes:
+  db_data:
+  wp_html:
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: wp-db
+    command: ["mysqld","--default-authentication-plugin=mysql_native_password","--character-set-server=utf8mb4","--collation-server=utf8mb4_0900_ai_ci"]
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-wordpress_db}
+      MYSQL_USER: ${MYSQL_USER:-wp_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL","mysqladmin ping -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [web]
+
+  wordpress:
+    image: wordpress:latest    # Apache版
+    container_name: wp-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE:-wordpress_db}
+      WORDPRESS_DB_USER: ${MYSQL_USER:-wp_user}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WPLANG','ja');
+        define('WP_MEMORY_LIMIT','256M');
+        define('WP_DEBUG', true);
+        define('WP_DEBUG_LOG', true);
+        define('WP_DEBUG_DISPLAY', false);
+    volumes:
+      - wp_html:/var/www/html
+      - ./wordpress/themes:/var/www/html/wp-content/themes
+      - ./php/php.ini:/usr/local/etc/php/conf.d/php.ini:ro
+    expose:
+      - "80"
+    restart: always
+    networks: [web]
+
+  nginx:
+    image: nginx:alpine
+    container_name: wp-nginx
+    depends_on: [wordpress]
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    expose:
+      - "80"
+    restart: unless-stopped
+    networks: [web]
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: wp-pma
+    depends_on: [db]
+    environment:
+      PMA_HOST: db
+      PMA_USER: ${MYSQL_USER:-wp_user}
+      PMA_PASSWORD: ${MYSQL_PASSWORD}
+    # 内部のみ（トンネルで必要時だけ公開するなら ports を外す）
+    expose:
+      - "80"
+    restart: always
+    networks: [web]
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: wp-cloudflared
+    command: tunnel --no-autoupdate run --token ${CF_TUNNEL_TOKEN}
+    restart: unless-stopped
+    networks: [web]
