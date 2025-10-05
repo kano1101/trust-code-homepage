@@ -68,9 +68,7 @@ export default defineConfig({
   base,
   build: {
     sourcemap: true,
-    outDir: 'dist',
-    manifest: true,
-    rollupOptions: { input: '/src/main.tsx' }
+    outDir: 'out',
   },
   resolve: {
     alias: {
@@ -80,11 +78,5 @@ export default defineConfig({
   server: {
     port: 3000,
     host: '0.0.0.0',
-    proxy: {
-      '/wp-json': {
-        target: 'http://localhost',
-        changeOrigin: true,
-      }
-    }
   }
 })

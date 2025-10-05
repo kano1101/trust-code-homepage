@@ -1,75 +1,66 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 
-type PostMeta = { title: string; date: string; excerpt: string; slug: string };
+import { useState } from 'react';
+import Header from './components/Header';
+import Hero from './components/Hero';
+import BlogPost from './components/BlogPost';
+import Sidebar from './components/Sidebar';
+import Footer from './components/Footer';
 
 export default function Home() {
-  const [posts, setPosts] = useState<PostMeta[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [currentPost] = useState({
+    id: 1,
+    title: 'TrustCodeの構想',
+    subtitle: 'ケーキ屋のエンジニアAqunの美学 for 自己啓発',
+    date: '2025年10月3日',
+    author: 'Aqun',
+    content: `1989年11月1日生、プログラマ、花屋、医療従事者として職を移り変わり現在のケーキ屋社内エンジニアとして職場、業界の経済効果を最大化する方法を模索。
 
-  useEffect(() => {
-    // WordPress REST API から投稿を動的に取得
-    const apiUrl = '/wp-json/wp/v2/posts?_embed&per_page=100';
-    fetch(apiUrl)
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch posts');
-        return res.json();
-      })
-      .then((wpPosts) => {
-        const postsData: PostMeta[] = wpPosts.map((post: any) => ({
-          title: post.title.rendered,
-          date: new Date(post.date).toLocaleDateString('ja-JP'),
-          excerpt: post.excerpt.rendered.replace(/<[^>]*>/g, '').substring(0, 150) + '...',
-          slug: post.slug,
-        }));
-        setPosts(postsData);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error('Error fetching posts:', err);
-        setError('投稿の取得に失敗しました');
-        setLoading(false);
-      });
-  }, []);
+日々の業務、ライフタイムを通じて世間に最大限自分の生きた証を残す。
 
-  if (loading) {
-    return (
-      <main className="max-w-4xl mx-auto p-8">
-        <p className="text-center text-gray-600">読み込み中...</p>
-      </main>
-    );
-  }
+そのためにこのサイトを通じて私、Aqunの持つ自己啓発・美学を発信する。
 
-  if (error) {
-    return (
-      <main className="max-w-4xl mx-auto p-8">
-        <p className="text-center text-red-600">{error}</p>
-      </main>
-    );
-  }
+## 何をするかではない、何故するかだ。
+
+内面的に強くない私なのだが、私は他の人より物忘れしやすい傾向にあると思う。なので、メモアプリを活用するなどして極力思いついたことを書き残すようにしている。
+
+そしてこれらを使って何かをしようと考えることがある。
+
+これがうまくいっている。
+
+ただうまくいかない点がないわけではなく、それはゴールデンルールのWhyがないからではないかと感じる現在の日々思うことなのである。
+
+そして、それはまさにその通りだった。
+
+## サイトの目的はライフスタイルの自己効力感を確認すること
+
+なぜうまくいくことを求めるのだろうか。
+
+このサイトを通してあなたに語りかけたい。
+
+ここtrust-code.netを拠点として私の活動を広げていきたい。その原点になるだろう。
+
+ここから先の話は、思いが馳せる度にブログで綴っていくことにする。`,
+    tags: ['自己啓発', 'エンジニア', 'ライフスタイル'],
+    readTime: '3分'
+  });
 
   return (
-      <main className="max-w-4xl mx-auto p-8">
-        <h1 className="text-3xl font-bold mb-8">ブログ記事一覧</h1>
-        {posts.length === 0 ? (
-          <p className="text-center text-gray-600">投稿が見つかりません</p>
-        ) : (
-          <ul className="space-y-6">
-            {posts.map((p) => (
-                <li key={p.slug} className="border-b pb-4">
-                  <Link
-                      to={`/posts/${p.slug}`}
-                      className="text-xl font-semibold text-blue-600 hover:underline"
-                  >
-                    {p.title}
-                  </Link>
-                  <p className="text-sm text-gray-500 mt-1">{p.date}</p>
-                  <p className="text-gray-700 mt-2">{p.excerpt}</p>
-                </li>
-            ))}
-          </ul>
-        )}
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-white">
+      <Header />
+      <Hero />
+      
+      <main className="max-w-7xl mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            <BlogPost post={currentPost} />
+          </div>
+          <div className="lg:col-span-1">
+            <Sidebar />
+          </div>
+        </div>
       </main>
+      
+      <Footer />
+    </div>
   );
 }
