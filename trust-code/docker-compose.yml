@@ -4,31 +4,35 @@ networks:
   web:
 
 volumes:
-  db_data:
-  wp_html:
+  db_data_dev:
+  wp_html_dev:
 
 services:
   db:
     image: mysql:8.0
     container_name: wp-db
-    command: ["mysqld","--default-authentication-plugin=mysql_native_password","--character-set-server=utf8mb4","--collation-server=utf8mb4_0900_ai_ci"]
+    command: ["mysqld","--default-authentication-plugin=mysql_native_password","--character-set-server=utf8mb4","--collation-server=utf8mb4_0900_ai_ci","--innodb-flush-method=fsync"]
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-wordpress_db}
       MYSQL_USER: ${MYSQL_USER:-wp_user}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
-      - db_data:/var/lib/mysql
+      - db_data_dev:/var/lib/mysql
     restart: always
     healthcheck:
-      test: ["CMD-SHELL","mysqladmin ping -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD || exit 1"]
-      interval: 5s
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -uroot --silent"]
+      interval: 10s
       timeout: 5s
-      retries: 20
+      retries: 30
+      start_period: 60s
     networks: [web]
 
   wordpress:
-    image: wordpress:latest    # Apache版
+    build:
+      context: ./wordpress
+      dockerfile: Dockerfile
+    image: akirakano/trust-code-wordpress:latest
     container_name: wp-app
     depends_on:
       db:
@@ -38,18 +42,39 @@ services:
       WORDPRESS_DB_NAME: ${MYSQL_DATABASE:-wordpress_db}
       WORDPRESS_DB_USER: ${MYSQL_USER:-wp_user}
       WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
+      WP_HOME: ${WP_HOME:-https://trust-code.net}
+      WP_SITEURL: ${WP_SITEURL:-https://trust-code.net}
       WORDPRESS_CONFIG_EXTRA: |
-        define('WPLANG','ja');
+        $$wp_home = getenv('WP_HOME');
+        $$wp_siteurl = getenv('WP_SITEURL');
+        define('WP_HOME', $$wp_home ? $$wp_home : 'https://trust-code.net');
+        define('WP_SITEURL', $$wp_siteurl ? $$wp_siteurl : 'https://trust-code.net');
         define('WP_MEMORY_LIMIT','256M');
         define('WP_DEBUG', true);
         define('WP_DEBUG_LOG', true);
         define('WP_DEBUG_DISPLAY', false);
+        define('FS_METHOD','direct');
+
+        // 本番環境のみFORCE_SSL_ADMINを有効化
+        if (strpos($$wp_home, 'https://') === 0) {
+          define('FORCE_SSL_ADMIN', true);
+
+          // Cloudflare / 逆プロキシ下でのHTTPS検知
+          if (!empty($$_SERVER['HTTP_CF_VISITOR'])) {
+            $$_cf = json_decode($$_SERVER['HTTP_CF_VISITOR'], true);
+            if (!empty($$_cf['scheme']) && $$_cf['scheme'] === 'https') { $$_SERVER['HTTPS'] = 'on'; }
+          }
+          if (!empty($$_SERVER['HTTP_X_FORWARDED_PROTO']) && $$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+            $$_SERVER['HTTPS'] = 'on';
+          }
+          if (!empty($$_SERVER['HTTP_X_FORWARDED_HOST'])) {
+            $$_SERVER['HTTP_HOST'] = $$_SERVER['HTTP_X_FORWARDED_HOST'];
+          }
+        }
     volumes:
-      - wp_html:/var/www/html
+      - wp_html_dev:/var/www/html
       - ./wordpress/themes:/var/www/html/wp-content/themes
       - ./php/php.ini:/usr/local/etc/php/conf.d/php.ini:ro
-    expose:
-      - "80"
     restart: always
     networks: [web]
 
@@ -59,8 +84,8 @@ services:
     depends_on: [wordpress]
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
-    expose:
-      - "80"
+    ports:
+      - "8080:80"
     restart: unless-stopped
     networks: [web]
 

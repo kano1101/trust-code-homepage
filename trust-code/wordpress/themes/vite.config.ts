@@ -69,6 +69,7 @@ export default defineConfig({
   build: {
     sourcemap: true,
     outDir: 'out',
+    manifest: true, // manifest.json生成を有効化
   },
   resolve: {
     alias: {
