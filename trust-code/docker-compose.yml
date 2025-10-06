@@ -45,18 +45,15 @@ services:
       WP_HOME: ${WP_HOME:-https://trust-code.net}
       WP_SITEURL: ${WP_SITEURL:-https://trust-code.net}
       WORDPRESS_CONFIG_EXTRA: |
-        $$wp_home = getenv('WP_HOME');
-        $$wp_siteurl = getenv('WP_SITEURL');
-        define('WP_HOME', $$wp_home ? $$wp_home : 'https://trust-code.net');
-        define('WP_SITEURL', $$wp_siteurl ? $$wp_siteurl : 'https://trust-code.net');
         define('WP_MEMORY_LIMIT','256M');
         define('WP_DEBUG', true);
         define('WP_DEBUG_LOG', true);
         define('WP_DEBUG_DISPLAY', false);
         define('FS_METHOD','direct');
 
-        // 本番環境のみFORCE_SSL_ADMINを有効化
-        if (strpos($$wp_home, 'https://') === 0) {
+        // 本番環境のみFORCE_SSL_ADMINとHTTPS検知を有効化
+        $$wp_home = getenv('WP_HOME');
+        if ($$wp_home && strpos($$wp_home, 'https://') === 0) {
           define('FORCE_SSL_ADMIN', true);
 
           // Cloudflare / 逆プロキシ下でのHTTPS検知
