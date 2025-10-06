@@ -1,0 +1,66 @@
+version: "3.8"
+services:
+  db:
+    image: mysql:5.7
+    container_name: "test-db"
+    volumes:
+      - ./db/mysql:/var/lib/mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pass_fB3uWvTS
+      MYSQL_DATABASE: wordpress_db
+      MYSQL_USER: akira_kano1101
+      MYSQL_PASSWORD: E6NrkxzdPjs*ec4L
+    healthcheck:
+      test: ["CMD","mysqladmin","ping","-h","localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  wordpress:
+    image: wordpress:latest
+    container_name: "test-wordpress"
+    volumes:
+      - ./wordpress/html:/var/www/html
+      - ./php/php.ini:/usr/local/etc/php/conf.d/php.ini
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "80"
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: wordpress_db
+      WORDPRESS_DB_USER: akira_kano1101
+      WORDPRESS_DB_PASSWORD: E6NrkxzdPjs*ec4L
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WPLANG', 'ja');
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: "test-phpmyadmin"
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - 8088:80
+
+  nginx:
+    image: nginx:alpine
+    container_name: "test-nginx"
+    restart: unless-stopped
+    depends_on: [wordpress]
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    expose:
+      - "80"
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: "test-cloudflared"
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CF_TUNNEL_TOKEN}
