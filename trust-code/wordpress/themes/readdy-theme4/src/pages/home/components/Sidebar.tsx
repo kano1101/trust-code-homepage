@@ -1,25 +1,17 @@
+import { useWordPressCategories } from '../../../hooks/useWordPressCategories';
+import { useWordPressConfig } from '../../../hooks/useWordPressConfig';
+import { useWordPressTags } from '../../../hooks/useWordPressTags';
 
 export default function Sidebar() {
-  const recentPosts = [
-    {
-      title: 'TrustCodeの構想',
-      date: '2025年10月3日',
-      category: '自己啓発'
-    }
-  ];
+  const { categories } = useWordPressCategories();
+  const { config } = useWordPressConfig();
+  const { tags } = useWordPressTags();
 
-  const categories = [
-    { name: '自己啓発', count: 1, icon: 'ri-lightbulb-line', color: 'text-yellow-600' },
-    { name: 'アクアリウム', count: 0, icon: 'ri-water-percent-line', color: 'text-blue-600' },
-    { name: 'ガジェット', count: 0, icon: 'ri-smartphone-line', color: 'text-green-600' },
-    { name: 'プログラミング', count: 0, icon: 'ri-code-line', color: 'text-purple-600' },
-    { name: 'AI・IT', count: 0, icon: 'ri-robot-line', color: 'text-red-600' }
-  ];
-
-  const tags = [
-    'エンジニア', 'ライフスタイル', '自己効力感', 'ケーキ屋', 'プログラマ',
-    '美学', 'ゴールデンルール', 'メモアプリ', 'Why', '活動'
-  ];
+  const author = config?.author || {
+    name: 'Aqun',
+    avatar: 'A',
+    bio: 'ケーキ屋の社内エンジニア\n1989年11月1日生',
+  };
 
   return (
     <aside className="space-y-6">
@@ -48,40 +40,24 @@ export default function Sidebar() {
           カテゴリー
         </h3>
         <div className="space-y-3">
-          {categories.map((category, index) => (
-            <div key={index} className="flex items-center justify-between cursor-pointer hover:bg-purple-50 p-2 rounded-lg transition-colors">
+          {categories.map((category) => (
+            <a
+              key={category.id}
+              href={`/?category=${category.id}`}
+              className="flex items-center justify-between cursor-pointer hover:bg-purple-50 p-2 rounded-lg transition-colors"
+            >
               <div className="flex items-center space-x-3">
-                <i className={`${category.icon} ${category.color}`}></i>
+                <i className="ri-folder-line text-purple-600"></i>
                 <span className="text-gray-700">{category.name}</span>
               </div>
               <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">
                 {category.count}
               </span>
-            </div>
+            </a>
           ))}
         </div>
       </div>
 
-      {/* 最近の投稿 */}
-      <div className="bg-white rounded-2xl shadow-lg border border-purple-100 p-6">
-        <h3 className="text-lg font-bold text-purple-800 mb-4 flex items-center">
-          <i className="ri-time-line mr-2 text-yellow-500"></i>
-          最近の投稿
-        </h3>
-        <div className="space-y-4">
-          {recentPosts.map((post, index) => (
-            <div key={index} className="cursor-pointer hover:bg-purple-50 p-3 rounded-lg transition-colors">
-              <h4 className="font-medium text-purple-800 mb-1">{post.title}</h4>
-              <div className="flex items-center justify-between text-sm text-gray-500">
-                <span>{post.date}</span>
-                <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">
-                  {post.category}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* タグクラウド */}
       <div className="bg-white rounded-2xl shadow-lg border border-purple-100 p-6">
@@ -90,13 +66,14 @@ export default function Sidebar() {
           タグ
         </h3>
         <div className="flex flex-wrap gap-2">
-          {tags.map((tag, index) => (
-            <span
-              key={index}
+          {tags.slice(0, 15).map((tag) => (
+            <a
+              key={tag.id}
+              href={`/?tag=${tag.slug}`}
               className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-purple-200 transition-colors"
             >
-              #{tag}
-            </span>
+              #{tag.name}
+            </a>
           ))}
         </div>
       </div>

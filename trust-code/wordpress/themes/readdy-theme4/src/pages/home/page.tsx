@@ -1,66 +1,75 @@
-
-import { useState } from 'react';
-import Header from './components/Header';
+import { useEffect } from 'react';
+import { useWordPressPosts, useCurrentPost } from '../../hooks/useWordPressPosts';
 import Hero from './components/Hero';
-import BlogPost from './components/BlogPost';
+import PostList from './components/PostList';
 import Sidebar from './components/Sidebar';
-import Footer from './components/Footer';
+import SinglePost from '../single/page';
 
 export default function Home() {
-  const [currentPost] = useState({
-    id: 1,
-    title: 'TrustCodeの構想',
-    subtitle: 'ケーキ屋のエンジニアAqunの美学 for 自己啓発',
-    date: '2025年10月3日',
-    author: 'Aqun',
-    content: `1989年11月1日生、プログラマ、花屋、医療従事者として職を移り変わり現在のケーキ屋社内エンジニアとして職場、業界の経済効果を最大化する方法を模索。
+  const urlParams = new URLSearchParams(window.location.search);
+  const postId = urlParams.get('p');
+  const categoryId = urlParams.get('category');
+  const tag = urlParams.get('tag');
 
-日々の業務、ライフタイムを通じて世間に最大限自分の生きた証を残す。
+  // 個別記事表示
+  if (postId) {
+    return <SinglePost />;
+  }
 
-そのためにこのサイトを通じて私、Aqunの持つ自己啓発・美学を発信する。
+  // 記事一覧表示
+  const { posts, loading, error } = useWordPressPosts(
+    10,
+    categoryId ? parseInt(categoryId) : undefined,
+    tag || undefined
+  );
 
-## 何をするかではない、何故するかだ。
-
-内面的に強くない私なのだが、私は他の人より物忘れしやすい傾向にあると思う。なので、メモアプリを活用するなどして極力思いついたことを書き残すようにしている。
-
-そしてこれらを使って何かをしようと考えることがある。
-
-これがうまくいっている。
-
-ただうまくいかない点がないわけではなく、それはゴールデンルールのWhyがないからではないかと感じる現在の日々思うことなのである。
-
-そして、それはまさにその通りだった。
-
-## サイトの目的はライフスタイルの自己効力感を確認すること
-
-なぜうまくいくことを求めるのだろうか。
-
-このサイトを通してあなたに語りかけたい。
-
-ここtrust-code.netを拠点として私の活動を広げていきたい。その原点になるだろう。
-
-ここから先の話は、思いが馳せる度にブログで綴っていくことにする。`,
-    tags: ['自己啓発', 'エンジニア', 'ライフスタイル'],
-    readTime: '3分'
-  });
+  useEffect(() => {
+    if (tag) {
+      document.title = `タグ: ${tag} - Trust Code`;
+    } else if (categoryId) {
+      document.title = 'カテゴリ別記事 - Trust Code';
+    } else {
+      document.title = 'Trust Code - 気持ちよく信頼あるコードを築こう';
+    }
+  }, [categoryId, tag]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-white">
-      <Header />
-      <Hero />
-      
+    <>
+      {!categoryId && <Hero />}
+
       <main className="max-w-7xl mx-auto px-4 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-            <BlogPost post={currentPost} />
+            {loading && (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+              </div>
+            )}
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                <p className="font-medium">エラーが発生しました</p>
+                <p className="text-sm">{error}</p>
+              </div>
+            )}
+
+            {!loading && !error && posts.length === 0 && (
+              <div className="bg-purple-50 border border-purple-200 text-purple-700 px-4 py-8 rounded-lg text-center">
+                <i className="ri-inbox-line text-4xl mb-2"></i>
+                <p className="font-medium">記事がまだありません</p>
+              </div>
+            )}
+
+            {!loading && !error && posts.length > 0 && (
+              <PostList posts={posts} />
+            )}
           </div>
+
           <div className="lg:col-span-1">
             <Sidebar />
           </div>
         </div>
       </main>
-      
-      <Footer />
-    </div>
+    </>
   );
 }

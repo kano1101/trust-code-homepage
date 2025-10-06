@@ -11,7 +11,7 @@ export default function Hero() {
       <div className="relative max-w-7xl mx-auto px-4 h-full flex items-center">
         <div className="w-full text-center text-white">
           <h1 className="text-4xl md:text-6xl font-bold mb-4">
-            ともに信頼ある
+            気持ちよく信頼ある
             <span className="text-yellow-400">コード</span>
             を築こう
           </h1>

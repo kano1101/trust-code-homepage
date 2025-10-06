@@ -1,17 +1,16 @@
 <?php
 /**
- * Readdy Theme functions
- * - Viteビルド資産のenqueue（既存）
+i * Readdy Theme 4 Functions
+ * - Viteビルド資産のenqueue
  * - Markdown(ACF: md_body) → HTML 変換
  * - RESTに md_body / md_html 追加
+ * - カスタムコメント投稿エンドポイント
+ * - いいね機能
  */
 
 /* ========== テーマサポートの設定 ========== */
 function readdy_theme_setup() {
-  // タイトルタグの自動生成
   add_theme_support('title-tag');
-
-  // HTML5対応
   add_theme_support('html5', array(
     'search-form',
     'comment-form',
@@ -19,29 +18,12 @@ function readdy_theme_setup() {
     'gallery',
     'caption',
   ));
-
-  // 投稿サムネイル
   add_theme_support('post-thumbnails');
 }
 add_action('after_setup_theme', 'readdy_theme_setup');
 
-/* ========== 管理画面での警告表示 ========== */
-function readdy_admin_notices() {
-  // Simple Like Pageプラグインのチェック（現在は独自実装を使用）
-  // 将来的にSimple Like Pageを使用する場合はこのコメントを外す
-  /*
-  if (!is_plugin_active('simple-like-page-plugin/simple-like-page-plugin.php')) {
-    echo '<div class="notice notice-warning is-dismissible">';
-    echo '<p><strong>Readdy Theme:</strong> Simple Like Pageプラグインがインストールされていません。いいね機能を使用するにはプラグインをインストールしてください。</p>';
-    echo '</div>';
-  }
-  */
-}
-add_action('admin_notices', 'readdy_admin_notices');
-
 /* ========== WordPressデフォルトスタイルを無効化 ========== */
 function readdy_remove_wp_styles() {
-  // WordPressのブロックエディタスタイルを削除
   wp_dequeue_style('wp-block-library');
   wp_dequeue_style('wp-block-library-theme');
   wp_dequeue_style('classic-theme-styles');
@@ -49,13 +31,12 @@ function readdy_remove_wp_styles() {
 }
 add_action('wp_enqueue_scripts', 'readdy_remove_wp_styles', 100);
 
-/* ========== 既存：Vite資産の読み込み ========== */
+/* ========== Vite資産の読み込み ========== */
 function readdy_theme_assets() {
   $dir  = get_template_directory();
   $uri  = get_template_directory_uri();
   $mf   = $dir . '/manifest.json';
 
-  // デバッグ: manifest.jsonの存在確認
   if (!file_exists($mf)) {
     error_log('Readdy Theme: manifest.json not found at ' . $mf);
     return;
@@ -75,19 +56,13 @@ function readdy_theme_assets() {
   // CSS
   if (!empty($entry['css'])) {
     foreach ($entry['css'] as $css) {
-      // manifest.json の css パスは "assets/..." なのでそのまま結合
       $css_url = $uri . '/' . $css;
-      error_log('Readdy Theme: Enqueuing CSS - ' . $css_url);
       wp_enqueue_style('readdy-'.md5($css), $css_url, [], null);
     }
   }
 
-  // JS（type=module を付与）
-  // manifest.json の file パスは "assets/..." なのでそのまま結合
+  // JS (type=module)
   $js_url = $uri . '/' . $entry['file'];
-  error_log('Readdy Theme: Enqueuing JS - ' . $js_url);
-
-  // type="module" を設定するため、add_inline_scriptを使用
   wp_register_script('readdy-main', $js_url, [], null, true);
   add_filter('script_loader_tag', function($tag, $handle, $src) {
     if ('readdy-main' === $handle) {
@@ -118,9 +93,6 @@ function rtheme_get_parsedown() {
   return $parser;
 }
 
-/**
- * ACFの md_body を取得
- */
 function rtheme_get_md_body($post_id) {
   if (function_exists('get_field')) {
     $md = get_field('md_body', $post_id);
@@ -166,7 +138,7 @@ add_action('acf/save_post', function ($post_id) {
   delete_post_meta($post_id, '_md_html_cache');
 }, 20);
 
-/* ========== REST APIフィールド登録 ========== */
+/* ========== REST APIエンドポイント ========== */
 add_action('rest_api_init', function () {
   register_rest_field('post', 'md_body', [
     'get_callback' => fn($obj) => rtheme_get_md_body($obj['id']),
@@ -202,7 +174,7 @@ add_action('rest_api_init', function () {
     'permission_callback' => '__return_true'
   ]);
 
-  // いいね機能のエンドポイント
+  // いいね機能
   register_rest_route('readdy/v1', '/posts/(?P<id>\d+)/like', [
     'methods' => 'POST',
     'callback' => 'readdy_like_post',
@@ -270,26 +242,20 @@ add_action('rest_api_init', function () {
 function readdy_like_post($request) {
   $post_id = $request['id'];
 
-  // 投稿の存在確認
   if (!get_post($post_id)) {
     return new WP_Error('invalid_post', 'Invalid post ID', ['status' => 404]);
   }
 
-  // クライアントIPを取得（簡易的な重複防止）
-  $user_ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
   $like_key = 'readdy_liked_' . $post_id;
 
-  // クッキーで既にいいねしているかチェック
   if (isset($_COOKIE[$like_key])) {
     return new WP_Error('already_liked', 'Already liked this post', ['status' => 400]);
   }
 
-  // いいね数を取得して増やす
   $current_likes = (int) get_post_meta($post_id, '_readdy_likes_count', true);
   $new_likes = $current_likes + 1;
   update_post_meta($post_id, '_readdy_likes_count', $new_likes);
 
-  // クッキーを設定（30日間）
   setcookie($like_key, '1', time() + (30 * 24 * 60 * 60), '/');
 
   return [
@@ -302,24 +268,20 @@ function readdy_like_post($request) {
 function readdy_unlike_post($request) {
   $post_id = $request['id'];
 
-  // 投稿の存在確認
   if (!get_post($post_id)) {
     return new WP_Error('invalid_post', 'Invalid post ID', ['status' => 404]);
   }
 
   $like_key = 'readdy_liked_' . $post_id;
 
-  // クッキーでいいねしているかチェック
   if (!isset($_COOKIE[$like_key])) {
     return new WP_Error('not_liked', 'Post not liked yet', ['status' => 400]);
   }
 
-  // いいね数を取得して減らす
   $current_likes = (int) get_post_meta($post_id, '_readdy_likes_count', true);
-  $new_likes = max(0, $current_likes - 1); // 0未満にならないように
+  $new_likes = max(0, $current_likes - 1);
   update_post_meta($post_id, '_readdy_likes_count', $new_likes);
 
-  // クッキーを削除
   setcookie($like_key, '', time() - 3600, '/');
 
   return [
@@ -336,18 +298,15 @@ function readdy_submit_comment($request) {
   $author_email = $request['author_email'];
   $content = $request['content'];
 
-  // 投稿の存在確認
   $post = get_post($post_id);
   if (!$post) {
     return new WP_Error('invalid_post', 'Invalid post ID', ['status' => 404]);
   }
 
-  // コメントが許可されているか確認
   if (!comments_open($post_id)) {
     return new WP_Error('comments_closed', 'Comments are closed for this post', ['status' => 403]);
   }
 
-  // コメントデータを準備
   $comment_data = [
     'comment_post_ID' => $post_id,
     'comment_author' => $author_name,
@@ -355,14 +314,13 @@ function readdy_submit_comment($request) {
     'comment_content' => $content,
     'comment_type' => 'comment',
     'comment_parent' => 0,
-    'user_id' => 0, // 匿名コメント
+    'user_id' => 0,
     'comment_author_IP' => $_SERVER['REMOTE_ADDR'] ?? '',
     'comment_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
     'comment_date' => current_time('mysql'),
-    'comment_approved' => 0, // モデレーション待ち
+    'comment_approved' => 0,
   ];
 
-  // コメントを挿入
   $comment_id = wp_insert_comment($comment_data);
 
   if (!$comment_id) {
@@ -387,18 +345,18 @@ function readdy_get_site_config() {
       'url' => home_url(),
     ],
     'author' => [
-      'name' => get_option('readdy_author_name', 'Author'),
-      'role' => get_option('readdy_author_role', 'Writer'),
+      'name' => get_option('readdy_author_name', 'Aqun'),
+      'role' => get_option('readdy_author_role', 'ケーキ屋の社内エンジニア'),
       'avatar' => get_option('readdy_author_avatar', 'A'),
-      'bio' => get_option('readdy_author_bio', ''),
+      'bio' => get_option('readdy_author_bio', 'ケーキ屋の社内エンジニア\n1989年11月1日生'),
     ],
     'theme' => [
       'primaryColor' => get_option('readdy_theme_primary_color', '#7C3AED'),
-      'accentColor' => get_option('readdy_theme_accent_color', '#14B8A6'),
+      'accentColor' => get_option('readdy_theme_accent_color', '#EAB308'),
       'gradients' => [
-        'hero' => get_option('readdy_theme_gradient_hero', 'from-purple-600 to-purple-800'),
+        'hero' => get_option('readdy_theme_gradient_hero', 'from-purple-900/60 to-purple-600/40'),
         'card' => get_option('readdy_theme_gradient_card', 'from-purple-600 to-purple-800'),
-        'button' => get_option('readdy_theme_gradient_button', 'from-purple-600 to-purple-800'),
+        'button' => get_option('readdy_theme_gradient_button', 'from-purple-600 to-purple-700'),
       ],
     ],
     'navigation' => [
@@ -410,7 +368,6 @@ function readdy_get_site_config() {
 
 /* ========== カスタムURL用のリライトルール ========== */
 add_action('init', function() {
-  error_log('[Readdy Theme] Adding rewrite rules');
   add_rewrite_rule('^categories/?$', 'index.php?custom_page=categories', 'top');
   add_rewrite_rule('^about/?$', 'index.php?custom_page=about', 'top');
   add_rewrite_rule('^contact/?$', 'index.php?custom_page=contact', 'top');
@@ -419,31 +376,23 @@ add_action('init', function() {
   add_rewrite_rule('^rss/?$', 'index.php?custom_page=rss', 'top');
 });
 
-// テーマ有効化時にリライトルールをフラッシュ
 add_action('after_switch_theme', function() {
-  error_log('[Readdy Theme] Theme activated - flushing rewrite rules');
   flush_rewrite_rules();
 });
 
 add_filter('query_vars', function($vars) {
-  error_log('[Readdy Theme] Registering custom_page query var');
   $vars[] = 'custom_page';
   return $vars;
 });
 
 add_action('template_include', function($template) {
   $custom_page = get_query_var('custom_page');
-  error_log('[Readdy Theme] template_include - custom_page: ' . var_export($custom_page, true));
 
   if ($custom_page) {
     $template_file = 'page-' . $custom_page . '.php';
-    error_log('[Readdy Theme] Loading template: ' . $template_file);
     $new_template = locate_template([$template_file]);
     if ($new_template) {
-      error_log('[Readdy Theme] Found template: ' . $new_template);
       return $new_template;
-    } else {
-      error_log('[Readdy Theme] Template ' . $template_file . ' not found');
     }
   }
 

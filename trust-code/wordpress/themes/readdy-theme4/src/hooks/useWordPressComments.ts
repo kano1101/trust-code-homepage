@@ -32,7 +32,6 @@ export const useWordPressComments = (postId: number | null) => {
 
     try {
       setLoading(true);
-      console.log('[DEBUG] Fetching comments with URL:', getRestUrl(`/wp/v2/comments`) + `&post=${postId}&status=approve&per_page=100`);
       const url = getRestUrl(`/wp/v2/comments`) + `&post=${postId}&status=approve&per_page=100`;
       const response = await fetch(url);
 
@@ -63,7 +62,6 @@ export const useWordPressComments = (postId: number | null) => {
     try {
       // カスタムエンドポイントを使用（認証不要）
       const url = getRestUrl(`/readdy/v1/posts/${postId}/comments`);
-      console.log('[DEBUG] Submitting comment to:', url);
 
       const response = await fetch(url, {
         method: 'POST',
@@ -84,7 +82,7 @@ export const useWordPressComments = (postId: number | null) => {
 
       const data = await response.json();
 
-      // コメント一覧を再読み込み（承認待ちなので表示されないが、エラーチェックのため）
+      // コメント一覧を再読み込み
       await loadComments();
 
       return data;
