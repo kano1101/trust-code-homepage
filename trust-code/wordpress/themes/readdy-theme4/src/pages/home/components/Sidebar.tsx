@@ -1,9 +1,5 @@
 
-import { useWordPressConfig } from '../../../hooks/useWordPressConfig';
-
 export default function Sidebar() {
-  const { config, loading } = useWordPressConfig();
-
   const recentPosts = [
     {
       title: 'TrustCodeの構想',
@@ -12,40 +8,35 @@ export default function Sidebar() {
     }
   ];
 
-  if (loading || !config) {
-    return (
-      <aside className="space-y-6">
-        {/* ローディング状態 */}
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white rounded-2xl shadow-lg border border-purple-100 p-6">
-            <div className="animate-pulse">
-              <div className="h-6 bg-purple-100 rounded w-1/2 mb-4"></div>
-              <div className="space-y-3">
-                <div className="h-4 bg-purple-50 rounded"></div>
-                <div className="h-4 bg-purple-50 rounded w-3/4"></div>
-                <div className="h-4 bg-purple-50 rounded w-1/2"></div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </aside>
-    );
-  }
+  const categories = [
+    { name: '自己啓発', count: 1, icon: 'ri-lightbulb-line', color: 'text-yellow-600' },
+    { name: 'アクアリウム', count: 0, icon: 'ri-water-percent-line', color: 'text-blue-600' },
+    { name: 'ガジェット', count: 0, icon: 'ri-smartphone-line', color: 'text-green-600' },
+    { name: 'プログラミング', count: 0, icon: 'ri-code-line', color: 'text-purple-600' },
+    { name: 'AI・IT', count: 0, icon: 'ri-robot-line', color: 'text-red-600' }
+  ];
+
+  const tags = [
+    'エンジニア', 'ライフスタイル', '自己効力感', 'ケーキ屋', 'プログラマ',
+    '美学', 'ゴールデンルール', 'メモアプリ', 'Why', '活動'
+  ];
 
   return (
     <aside className="space-y-6">
       {/* プロフィール */}
       <div className="bg-white rounded-2xl shadow-lg border border-purple-100 p-6">
         <div className="text-center">
-          <div className={`w-20 h-20 bg-gradient-to-br ${config.theme.gradients.card} rounded-full flex items-center justify-center mx-auto mb-4`}>
-            <span className="text-white font-bold text-2xl">{config.author.avatar}</span>
+          <div className="w-20 h-20 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-white font-bold text-2xl">A</span>
           </div>
-          <h3 className="text-xl font-bold text-purple-800 mb-2">{config.author.name}</h3>
-          <p className="text-gray-600 text-sm mb-4 whitespace-pre-line">
-            {config.author.bio}
+          <h3 className="text-xl font-bold text-purple-800 mb-2">Aqun</h3>
+          <p className="text-gray-600 text-sm mb-4">
+            ケーキ屋の社内エンジニア<br />
+            1989年11月1日生
           </p>
           <p className="text-gray-700 text-sm leading-relaxed">
-            {config.author.description}
+            プログラマ、花屋、医療従事者を経て現在のケーキ屋社内エンジニアとして活動。
+            自己啓発とテクノロジーの融合を追求。
           </p>
         </div>
       </div>
@@ -57,12 +48,8 @@ export default function Sidebar() {
           カテゴリー
         </h3>
         <div className="space-y-3">
-          {config.categories.map((category, index) => (
-            <a
-              key={index}
-              href="/categories"
-              className="flex items-center justify-between cursor-pointer hover:bg-purple-50 p-2 rounded-lg transition-colors"
-            >
+          {categories.map((category, index) => (
+            <div key={index} className="flex items-center justify-between cursor-pointer hover:bg-purple-50 p-2 rounded-lg transition-colors">
               <div className="flex items-center space-x-3">
                 <i className={`${category.icon} ${category.color}`}></i>
                 <span className="text-gray-700">{category.name}</span>
@@ -70,17 +57,8 @@ export default function Sidebar() {
               <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">
                 {category.count}
               </span>
-            </a>
+            </div>
           ))}
-        </div>
-        <div className="mt-4 pt-4 border-t border-purple-100">
-          <a
-            href="/categories"
-            className="text-purple-600 hover:text-purple-800 text-sm font-medium transition-colors cursor-pointer flex items-center"
-          >
-            すべてのカテゴリを見る
-            <i className="ri-arrow-right-line ml-1"></i>
-          </a>
         </div>
       </div>
 
@@ -94,7 +72,7 @@ export default function Sidebar() {
           {recentPosts.map((post, index) => (
             <div key={index} className="cursor-pointer hover:bg-purple-50 p-3 rounded-lg transition-colors">
               <h4 className="font-medium text-purple-800 mb-1">{post.title}</h4>
-              <div className="flex items-center justify-between text-sm text-gray-5">
+              <div className="flex items-center justify-between text-sm text-gray-500">
                 <span>{post.date}</span>
                 <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">
                   {post.category}
@@ -112,7 +90,7 @@ export default function Sidebar() {
           タグ
         </h3>
         <div className="flex flex-wrap gap-2">
-          {config.tags.map((tag, index) => (
+          {tags.map((tag, index) => (
             <span
               key={index}
               className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-purple-200 transition-colors"
@@ -124,7 +102,7 @@ export default function Sidebar() {
       </div>
 
       {/* ニュースレター */}
-      <div className={`bg-gradient-to-br ${config.theme.gradients.card} rounded-2xl shadow-lg p-6 text-white`}>
+      <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-2xl shadow-lg p-6 text-white">
         <h3 className="text-lg font-bold mb-3 flex items-center">
           <i className="ri-mail-line mr-2 text-yellow-400"></i>
           ニュースレター

@@ -1,51 +1,46 @@
 
-import { useWordPressConfig } from '../../../hooks/useWordPressConfig';
-import { WordPressPost } from '../../../hooks/useWordPressPosts';
-
 interface BlogPostProps {
-  post: WordPressPost;
+  post: {
+    id: number;
+    title: string;
+    subtitle: string;
+    date: string;
+    author: string;
+    content: string;
+    tags: string[];
+    readTime: string;
+  };
 }
 
 export default function BlogPost({ post }: BlogPostProps) {
-  const { config, loading } = useWordPressConfig();
-
-  // WordPressのHTML contentをそのまま表示
-  const createMarkup = (html: string) => {
-    return { __html: html };
+  const formatContent = (content: string) => {
+    const lines = content.split('\n');
+    return lines.map((line, index) => {
+      if (line.startsWith('## ')) {
+        return (
+          <h2 key={index} className="text-2xl font-bold text-purple-800 mt-8 mb-4">
+            {line.replace('## ', '')}
+          </h2>
+        );
+      }
+      if (line.trim() === '') {
+        return <br key={index} />;
+      }
+      return (
+        <p key={index} className="text-gray-700 leading-relaxed mb-4">
+          {line}
+        </p>
+      );
+    });
   };
-
-  if (loading || !config) {
-    return (
-      <article className="bg-white rounded-2xl shadow-lg border border-purple-100 overflow-hidden">
-        <div className="p-8">
-          <div className="animate-pulse">
-            <div className="flex items-center space-x-4 mb-6">
-              <div className="w-12 h-12 bg-purple-100 rounded-full"></div>
-              <div className="space-y-2">
-                <div className="h-4 bg-purple-100 rounded w-24"></div>
-                <div className="h-3 bg-purple-50 rounded w-16"></div>
-              </div>
-            </div>
-            <div className="h-8 bg-purple-100 rounded w-3/4 mb-4"></div>
-            <div className="h-6 bg-purple-50 rounded w-1/2 mb-6"></div>
-            <div className="space-y-3">
-              <div className="h-4 bg-gray-100 rounded"></div>
-              <div className="h-4 bg-gray-100 rounded w-5/6"></div>
-              <div className="h-4 bg-gray-100 rounded w-4/5"></div>
-            </div>
-          </div>
-        </div>
-      </article>
-    );
-  }
 
   return (
     <article className="bg-white rounded-2xl shadow-lg border border-purple-100 overflow-hidden">
       <div className="p-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-4">
-            <div className={`w-12 h-12 bg-gradient-to-br ${config.theme.gradients.card} rounded-full flex items-center justify-center`}>
-              <span className="text-white font-bold text-lg">{config.author.avatar}</span>
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full flex items-center justify-center">
+              <span className="text-white font-bold text-lg">A</span>
             </div>
             <div>
               <p className="font-semibold text-purple-800">{post.author}</p>
@@ -82,7 +77,9 @@ export default function BlogPost({ post }: BlogPostProps) {
           ))}
         </div>
 
-        <div className="prose prose-lg max-w-none" dangerouslySetInnerHTML={createMarkup(post.content)} />
+        <div className="prose prose-lg max-w-none">
+          {formatContent(post.content)}
+        </div>
 
         <div className="mt-8 pt-6 border-t border-purple-100">
           <div className="flex items-center justify-between">
@@ -96,7 +93,7 @@ export default function BlogPost({ post }: BlogPostProps) {
                 <span>コメント</span>
               </button>
             </div>
-            <button className={`flex items-center space-x-2 bg-gradient-to-r ${config.theme.gradients.button} text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all cursor-pointer whitespace-nowrap`}>
+            <button className="flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all cursor-pointer whitespace-nowrap">
               <i className="ri-bookmark-line"></i>
               <span>保存</span>
             </button>

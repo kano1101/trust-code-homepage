@@ -5,7 +5,7 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="md:col-span-2">
-            <a href="/" className="flex items-center space-x-3 mb-4 cursor-pointer">
+            <div className="flex items-center space-x-3 mb-4">
               <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center">
                 <i className="ri-code-s-slash-line text-purple-900 text-xl"></i>
               </div>
@@ -15,7 +15,7 @@ export default function Footer() {
                 </h3>
                 <p className="text-sm text-purple-300">ともに信頼あるコードを築こう</p>
               </div>
-            </a>
+            </div>
             <p className="text-purple-200 mb-4 leading-relaxed">
               ケーキ屋の社内エンジニアAqunが、自己啓発、アクアリウム、ガジェット、プログラミング、AI・ITについて綴るブログサイトです。
               日々の学びと経験を通じて、信頼あるコードと人生を築いていきます。

@@ -6,9 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:theme": "vite build && npm run copy:assets",
-    "copy:assets": "cp -r out/assets/* assets/ && cp out/.vite/manifest.json .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "copy:assets": "cp -r out/assets/* assets/ && cp out/.vite/manifest.json ."
   },
   "dependencies": {
     "i18next": "^25.3.2",
