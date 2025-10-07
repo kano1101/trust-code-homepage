@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PageHero from '../../components/PageHero';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -62,6 +63,7 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-purple-50 via-white to-purple-50">
+      <PageHero title="Contact" subtitle="お問い合わせ" colorScheme="green" />
       <main className="flex-1">
         <div className="max-w-5xl mx-auto px-4 py-12">
           {/* Page Header */}

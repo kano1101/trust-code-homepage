@@ -1,4 +1,5 @@
 import { useWordPressCategories } from '../../hooks/useWordPressCategories';
+import PageHero from '../../components/PageHero';
 
 export default function CategoriesPage() {
   const { categories, loading, error } = useWordPressCategories();
@@ -17,6 +18,7 @@ export default function CategoriesPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-purple-50 via-white to-purple-50">
+      <PageHero title="Categories" subtitle="カテゴリ一覧" colorScheme="orange" />
       <main className="flex-1">
         <div className="max-w-7xl mx-auto px-4 py-12">
           {/* Page Header */}

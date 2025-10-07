@@ -4,6 +4,8 @@ import NotFound from "../pages/NotFound";
 import Home from "../pages/home/page";
 import Categories from "../pages/categories/page";
 import Tags from "../pages/tags/page";
+import CategoryPage from "../pages/category/page";
+import TagPage from "../pages/tag/page";
 import About from "../pages/about/page";
 import Contact from "../pages/contact/page";
 import Privacy from "../pages/privacy/page";
@@ -16,14 +18,7 @@ const routes: RouteObject[] = [
     path: "/",
     element: <Layout><Home /></Layout>,
   },
-  {
-    path: "/post/:id",
-    element: <Layout><SinglePost /></Layout>,
-  },
-  {
-    path: "/category/:id",
-    element: <Layout><Home /></Layout>,
-  },
+  // 固定ページ（優先度高）
   {
     path: "/categories",
     element: <Layout><Categories /></Layout>,
@@ -51,6 +46,21 @@ const routes: RouteObject[] = [
   {
     path: "/rss",
     element: <Layout><RSS /></Layout>,
+  },
+  // カテゴリアーカイブ（IDベース）
+  {
+    path: "/category/:id",
+    element: <Layout><CategoryPage /></Layout>,
+  },
+  // タグアーカイブ（IDベース）
+  {
+    path: "/tag/:id",
+    element: <Layout><TagPage /></Layout>,
+  },
+  // 個別記事（IDベース）
+  {
+    path: "/post/:id",
+    element: <Layout><SinglePost /></Layout>,
   },
   {
     path: "*",

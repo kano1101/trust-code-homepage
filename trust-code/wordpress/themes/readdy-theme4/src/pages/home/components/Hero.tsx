@@ -11,9 +11,9 @@ export default function Hero() {
       <div className="relative max-w-7xl mx-auto px-4 h-full flex items-center">
         <div className="w-full text-center text-white">
           <h1 className="text-4xl md:text-6xl font-bold mb-4">
-            気持ちよく信頼ある
+            気持ちいい
             <span className="text-yellow-400">コード</span>
-            を築こう
+            で信頼を重ねて
           </h1>
           <p className="text-xl md:text-2xl mb-6 text-purple-100">
             ケーキ屋のエンジニアAqunが綴る、自己啓発とテクノロジーの融合
@@ -23,7 +23,6 @@ export default function Hero() {
             <span className="bg-purple-600/80 px-4 py-2 rounded-full">アクアリウム</span>
             <span className="bg-purple-600/80 px-4 py-2 rounded-full">ガジェット</span>
             <span className="bg-purple-600/80 px-4 py-2 rounded-full">プログラミング</span>
-            <span className="bg-purple-600/80 px-4 py-2 rounded-full">AI・IT</span>
           </div>
         </div>
       </div>

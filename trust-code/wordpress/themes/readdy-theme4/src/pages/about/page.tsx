@@ -1,4 +1,5 @@
 import { useWordPressConfig } from '../../hooks/useWordPressConfig';
+import PageHero from '../../components/PageHero';
 
 export default function AboutPage() {
   const { config } = useWordPressConfig();
@@ -28,6 +29,7 @@ export default function AboutPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-purple-50 via-white to-purple-50">
+      <PageHero title="About" subtitle="私について" colorScheme="blue" />
       <main className="flex-1">
         <div className="max-w-5xl mx-auto px-4 py-12">
           {/* Hero Section */}
@@ -105,10 +107,10 @@ export default function AboutPage() {
               理念
             </h2>
             <blockquote className="text-lg leading-relaxed italic border-l-4 border-yellow-400 pl-6">
-              「気持ちよく信頼あるコードを築こう」
+              「気持ちいいコードで信頼を重ねて」
               <br />
               <br />
-              技術と人生、どちらも信頼できる基盤の上に築かれるべきです。
+              技術と人生、どちらも信頼できる基盤の上に重ねられるべきです。
               日々の実践と学びを通じて、より良いコードとより良い人生を追求しています。
             </blockquote>
           </div>

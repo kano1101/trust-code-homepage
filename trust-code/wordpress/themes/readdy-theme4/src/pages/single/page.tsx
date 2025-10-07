@@ -21,6 +21,7 @@ export default function SinglePost() {
       })
       .then(data => {
         setPost(data);
+        document.title = `${data.title.rendered} - Trust Code`;
         setLoading(false);
       })
       .catch(err => {

@@ -10,7 +10,7 @@ export default function Header() {
   const { categories } = useWordPressCategories();
 
   const siteName = config?.site?.title || 'Trust Code';
-  const tagline = config?.site?.tagline || '気持ちよく信頼あるコードを築こう';
+  const tagline = config?.site?.tagline || '気持ちいいコードで信頼を重ねて';
 
   const mainNavigation = [
     { name: 'HOME', href: '/', active: window.location.pathname === '/' },

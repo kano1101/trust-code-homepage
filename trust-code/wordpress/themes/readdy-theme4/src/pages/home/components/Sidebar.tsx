@@ -43,7 +43,7 @@ export default function Sidebar() {
           {categories.map((category) => (
             <a
               key={category.id}
-              href={`/?category=${category.id}`}
+              href={`/category/${category.id}`}
               className="flex items-center justify-between cursor-pointer hover:bg-purple-50 p-2 rounded-lg transition-colors"
             >
               <div className="flex items-center space-x-3">
@@ -69,7 +69,7 @@ export default function Sidebar() {
           {tags.slice(0, 15).map((tag) => (
             <a
               key={tag.id}
-              href={`/?tag=${tag.slug}`}
+              href={`/tag/${tag.id}`}
               className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-purple-200 transition-colors"
             >
               #{tag.name}

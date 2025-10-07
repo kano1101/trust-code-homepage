@@ -237,7 +237,7 @@ function readdy_get_site_config() {
   return [
     'site' => [
       'title' => get_option('readdy_site_title', get_bloginfo('name')),
-      'tagline' => get_option('readdy_site_tagline', '気持ちよく信頼あるコードを築こう'),
+      'tagline' => get_option('readdy_site_tagline', '気持ちいいコードで信頼を重ねて'),
       'description' => get_option('readdy_site_description', ''),
       'url' => home_url(),
     ],
@@ -263,24 +263,47 @@ function readdy_get_site_config() {
   ];
 }
 
-/* ========== カスタムページ用リライトルール（パーマリンク設定不問） ========== */
+/* ========== カスタムページ用リライトルール ========== */
 add_action('init', function() {
-  add_rewrite_rule('^categories/?$', 'index.php?pagename=categories', 'top');
+  // 固定ページ（最優先で追加）
   add_rewrite_rule('^about/?$', 'index.php?pagename=about', 'top');
   add_rewrite_rule('^contact/?$', 'index.php?pagename=contact', 'top');
   add_rewrite_rule('^privacy/?$', 'index.php?pagename=privacy', 'top');
   add_rewrite_rule('^terms/?$', 'index.php?pagename=terms', 'top');
+  add_rewrite_rule('^categories/?$', 'index.php?pagename=categories', 'top');
+  add_rewrite_rule('^tags/?$', 'index.php?pagename=tags', 'top');
   add_rewrite_rule('^rss/?$', 'index.php?pagename=rss', 'top');
+
+  // カテゴリ・タグアーカイブ（React SPAで処理、IDベース）
+  add_rewrite_rule('^category/([0-9]+)/?$', 'index.php?spa_route=category&spa_id=$matches[1]', 'top');
+  add_rewrite_rule('^tag/([0-9]+)/?$', 'index.php?spa_route=tag&spa_id=$matches[1]', 'top');
+
+  // 個別投稿（React SPAで処理、IDベース）
+  add_rewrite_rule('^post/([0-9]+)/?$', 'index.php?spa_route=post&spa_id=$matches[1]', 'top');
 }, 1);
+
+/* ========== カスタムクエリ変数の登録 ========== */
+add_filter('query_vars', function($vars) {
+  $vars[] = 'spa_route';
+  $vars[] = 'spa_id';
+  return $vars;
+});
 
 add_action('after_switch_theme', function() {
   flush_rewrite_rules();
 });
 
 add_filter('template_include', function($template) {
-  $pagename = get_query_var('pagename');
+  // SPAルート処理
+  $spa_route = get_query_var('spa_route');
+  if ($spa_route) {
+    // category, tag, post など全て index.php でReact SPAに処理させる
+    return get_template_directory() . '/index.php';
+  }
 
-  $custom_pages = ['categories', 'about', 'contact', 'privacy', 'terms', 'rss'];
+  // 固定ページ処理
+  $pagename = get_query_var('pagename');
+  $custom_pages = ['categories', 'tags', 'about', 'contact', 'privacy', 'terms', 'rss'];
   if (in_array($pagename, $custom_pages)) {
     $template_file = 'page-' . $pagename . '.php';
     $new_template = locate_template([$template_file]);

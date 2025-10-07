@@ -26,7 +26,7 @@ const getRestUrl = (path: string): string => {
   return `/index.php?rest_route=${encodeURIComponent(path)}`;
 };
 
-export const useWordPressPosts = (perPage: number = 10, categoryId?: number, tagSlug?: string) => {
+export const useWordPressPosts = (perPage: number = 10, categoryId?: number, tagId?: number) => {
   const [posts, setPosts] = useState<WordPressPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,8 +41,8 @@ export const useWordPressPosts = (perPage: number = 10, categoryId?: number, tag
           url += `&categories=${categoryId}`;
         }
 
-        if (tagSlug) {
-          url += `&tags_slug=${tagSlug}`;
+        if (tagId) {
+          url += `&tags=${tagId}`;
         }
 
         const response = await fetch(url);
@@ -63,7 +63,7 @@ export const useWordPressPosts = (perPage: number = 10, categoryId?: number, tag
     };
 
     fetchPosts();
-  }, [perPage, categoryId, tagSlug]);
+  }, [perPage, categoryId, tagId]);
 
   return { posts, loading, error };
 };

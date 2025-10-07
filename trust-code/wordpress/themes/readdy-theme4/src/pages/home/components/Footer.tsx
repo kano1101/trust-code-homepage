@@ -35,7 +35,7 @@ export default function Footer() {
             </div>
             <p className="text-purple-200 text-sm leading-relaxed">
               ケーキ屋のエンジニアAqunが綴る、自己啓発とテクノロジーの融合。
-              ともに信頼あるコードを築きましょう。
+              気持ちいいコードで信頼を重ねていきましょう。
             </p>
           </div>
 
