@@ -13,8 +13,7 @@ export default function Header() {
   const tagline = config?.site?.tagline || '気持ちよく信頼あるコードを築こう';
 
   const mainNavigation = [
-    { name: 'ホーム', href: '/', active: window.location.pathname === '/' },
-    { name: 'ブログ', href: '/blog', active: window.location.pathname === '/blog' },
+    { name: 'HOME', href: '/', active: window.location.pathname === '/' },
     { name: 'About', href: '/about', active: window.location.pathname === '/about' },
     { name: 'Contact', href: '/contact', active: window.location.pathname === '/contact' },
   ];
@@ -80,7 +79,7 @@ export default function Header() {
                     {categories.map((category) => (
                       <a
                         key={category.id}
-                        href={`/?category=${category.id}`}
+                        href={`/category/${category.id}`}
                         className="block px-4 py-2 text-purple-700 hover:bg-purple-50 transition-colors"
                       >
                         <span>{category.name}</span>
@@ -138,7 +137,7 @@ export default function Header() {
                 {categories.slice(0, 5).map((category) => (
                   <a
                     key={category.id}
-                    href={`/?category=${category.id}`}
+                    href={`/category/${category.id}`}
                     className="block pl-4 py-1 text-sm text-purple-600 hover:text-purple-900"
                   >
                     {category.name} ({category.count})

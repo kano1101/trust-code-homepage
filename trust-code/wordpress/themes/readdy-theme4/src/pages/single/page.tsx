@@ -1,11 +1,33 @@
-import { useCurrentPost } from '../../hooks/useWordPressPosts';
+import { useParams } from 'react-router-dom';
 import { usePostLikes } from '../../hooks/usePostLikes';
 import { useWordPressComments } from '../../hooks/useWordPressComments';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '../home/components/Sidebar';
+import type { Post } from '../../types/blog';
 
 export default function SinglePost() {
-  const { post, loading, error } = useCurrentPost();
+  const { id } = useParams<{ id: string }>();
+  const [post, setPost] = useState<Post | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+
+    fetch(`/wp-json/wp/v2/posts/${id}?_embed`)
+      .then(res => {
+        if (!res.ok) throw new Error('記事の取得に失敗しました');
+        return res.json();
+      })
+      .then(data => {
+        setPost(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, [id]);
   const { likesCount, isLiked, toggleLike } = usePostLikes(post?.id || null);
   const { comments, submitComment } = useWordPressComments(post?.id || null);
 
@@ -83,7 +105,7 @@ export default function SinglePost() {
                 {categories.map((cat: any) => (
                   <a
                     key={cat.id}
-                    href={`/?category=${cat.id}`}
+                    href={`/category/${cat.id}`}
                     className="inline-block px-3 py-1 bg-purple-100 text-purple-700 text-sm font-medium rounded-full hover:bg-purple-200 transition-colors"
                   >
                     {cat.name}

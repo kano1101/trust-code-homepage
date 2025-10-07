@@ -58,7 +58,7 @@ export default function CategoriesPage() {
                 return (
                   <a
                     key={category.id}
-                    href={`/?category=${category.id}`}
+                    href={`/category/${category.id}`}
                     className="group bg-white rounded-2xl shadow-lg border border-purple-100 p-6 hover:shadow-xl hover:border-purple-300 transition-all duration-300 hover:-translate-y-1"
                   >
                     <div className="flex items-start space-x-4">

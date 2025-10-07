@@ -31,7 +31,7 @@ export default function PostList({ posts }: PostListProps) {
                   {categories.map((cat: any) => (
                     <a
                       key={cat.id}
-                      href={`/?category=${cat.id}`}
+                      href={`/category/${cat.id}`}
                       className="inline-block px-3 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full hover:bg-purple-200 transition-colors"
                     >
                       {cat.name}
@@ -42,7 +42,7 @@ export default function PostList({ posts }: PostListProps) {
 
               {/* Title */}
               <h2 className="text-2xl font-bold text-purple-900 mb-2">
-                <a href={`/?p=${post.id}`} className="hover:text-purple-600 transition-colors">
+                <a href={`/post/${post.id}`} className="hover:text-purple-600 transition-colors">
                   {post.title.rendered}
                 </a>
               </h2>
@@ -72,7 +72,7 @@ export default function PostList({ posts }: PostListProps) {
 
               {/* Read More */}
               <a
-                href={`/?p=${post.id}`}
+                href={`/post/${post.id}`}
                 className="inline-flex items-center text-purple-700 hover:text-purple-900 font-medium transition-colors"
               >
                 続きを読む

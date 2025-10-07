@@ -1,22 +1,15 @@
 import { useEffect } from 'react';
-import { useWordPressPosts, useCurrentPost } from '../../hooks/useWordPressPosts';
+import { useParams } from 'react-router-dom';
+import { useWordPressPosts } from '../../hooks/useWordPressPosts';
 import Hero from './components/Hero';
 import PostList from './components/PostList';
 import Sidebar from './components/Sidebar';
-import SinglePost from '../single/page';
 
 export default function Home() {
+  const { id: categoryId } = useParams<{ id: string }>();
   const urlParams = new URLSearchParams(window.location.search);
-  const postId = urlParams.get('p');
-  const categoryId = urlParams.get('category');
   const tag = urlParams.get('tag');
 
-  // 個別記事表示
-  if (postId) {
-    return <SinglePost />;
-  }
-
-  // 記事一覧表示
   const { posts, loading, error } = useWordPressPosts(
     10,
     categoryId ? parseInt(categoryId) : undefined,
@@ -35,7 +28,7 @@ export default function Home() {
 
   return (
     <>
-      {!categoryId && <Hero />}
+      {!categoryId && !tag && <Hero />}
 
       <main className="max-w-7xl mx-auto px-4 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

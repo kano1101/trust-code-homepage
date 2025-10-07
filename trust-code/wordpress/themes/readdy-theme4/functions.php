@@ -74,7 +74,7 @@ function readdy_theme_assets() {
 }
 add_action('wp_enqueue_scripts', 'readdy_theme_assets');
 
-/* ========== Markdown 変換準備 ========== */
+/* ========== Markdown変換 ========== */
 function rtheme_get_parsedown() {
   static $parser = null;
   if ($parser) return $parser;
@@ -87,55 +87,41 @@ function rtheme_get_parsedown() {
   } else {
     $parser = new Parsedown();
   }
-  if (method_exists($parser, 'setSafeMode')) {
-    $parser->setSafeMode(true);
-  }
+  $parser->setSafeMode(true);
   return $parser;
 }
 
 function rtheme_get_md_body($post_id) {
-  if (function_exists('get_field')) {
-    $md = get_field('md_body', $post_id);
-    if (!empty($md)) return $md;
-  }
-  $md = get_post_meta($post_id, 'md_body', true);
-  return $md ?: '';
+  return function_exists('get_field') && ($md = get_field('md_body', $post_id))
+    ? $md
+    : (get_post_meta($post_id, 'md_body', true) ?: '');
 }
 
-/* ========== the_content をMD優先でHTML化 ========== */
+function rtheme_render_markdown($md, $post_id) {
+  $hash = md5($md);
+  $cached = get_post_meta($post_id, '_md_html_cache', true);
+
+  if (is_array($cached) && ($cached['hash'] ?? '') === $hash) {
+    return $cached['html'];
+  }
+
+  $rendered = wp_kses_post(rtheme_get_parsedown()->text($md));
+  update_post_meta($post_id, '_md_html_cache', ['hash' => $hash, 'html' => $rendered]);
+  return $rendered;
+}
+
 add_filter('the_content', function ($html) {
   global $post;
-  if (empty($post) || !isset($post->ID)) return $html;
-
-  $md = rtheme_get_md_body($post->ID);
-  if ($md === '' || $md === null) return $html;
-
-  $hash    = md5($md);
-  $cached  = get_post_meta($post->ID, '_md_html_cache', true);
-  if (is_array($cached) && ($cached['hash'] ?? '') === $hash) {
-    $rendered = $cached['html'];
-  } else {
-    $parser   = rtheme_get_parsedown();
-    $rendered = $parser->text($md);
-    $rendered = wp_kses_post($rendered);
-    update_post_meta($post->ID, '_md_html_cache', [
-      'hash' => $hash,
-      'html' => $rendered,
-    ]);
-  }
-  return $rendered;
+  if (empty($post->ID) || !($md = rtheme_get_md_body($post->ID))) return $html;
+  return rtheme_render_markdown($md, $post->ID);
 }, 9);
 
-/* ========== キャッシュ無効化 ========== */
-add_action('updated_post_meta', function ($meta_id, $post_id, $meta_key, $_prev) {
-  if ($meta_key === 'md_body') {
-    delete_post_meta($post_id, '_md_html_cache');
-  }
-}, 10, 4);
+add_action('updated_post_meta', function ($meta_id, $post_id, $meta_key) {
+  if ($meta_key === 'md_body') delete_post_meta($post_id, '_md_html_cache');
+}, 10, 3);
 
 add_action('acf/save_post', function ($post_id) {
-  if (get_post_type($post_id) !== 'post') return;
-  delete_post_meta($post_id, '_md_html_cache');
+  if (get_post_type($post_id) === 'post') delete_post_meta($post_id, '_md_html_cache');
 }, 20);
 
 /* ========== REST APIエンドポイント ========== */
@@ -147,22 +133,8 @@ add_action('rest_api_init', function () {
 
   register_rest_field('post', 'md_html', [
     'get_callback' => function ($obj) {
-      $post_id = $obj['id'];
-      $md = rtheme_get_md_body($post_id);
-      if ($md === '' || $md === null) return null;
-
-      $hash    = md5($md);
-      $cached  = get_post_meta($post_id, '_md_html_cache', true);
-      if (is_array($cached) && ($cached['hash'] ?? '') === $hash) {
-        return $cached['html'];
-      }
-      $parser   = rtheme_get_parsedown();
-      $rendered = wp_kses_post($parser->text($md));
-      update_post_meta($post_id, '_md_html_cache', [
-        'hash' => $hash,
-        'html' => $rendered,
-      ]);
-      return $rendered;
+      $md = rtheme_get_md_body($obj['id']);
+      return $md ? rtheme_render_markdown($md, $obj['id']) : null;
     },
     'schema' => ['type' => 'string'],
   ]);
@@ -175,31 +147,16 @@ add_action('rest_api_init', function () {
   ]);
 
   // いいね機能
-  register_rest_route('readdy/v1', '/posts/(?P<id>\d+)/like', [
-    'methods' => 'POST',
-    'callback' => 'readdy_like_post',
+  $like_args = [
     'permission_callback' => '__return_true',
-    'args' => [
-      'id' => [
-        'validate_callback' => function($param) {
-          return is_numeric($param);
-        }
-      ],
-    ],
-  ]);
+    'args' => ['id' => ['validate_callback' => 'is_numeric']],
+  ];
 
-  register_rest_route('readdy/v1', '/posts/(?P<id>\d+)/unlike', [
-    'methods' => 'POST',
-    'callback' => 'readdy_unlike_post',
-    'permission_callback' => '__return_true',
-    'args' => [
-      'id' => [
-        'validate_callback' => function($param) {
-          return is_numeric($param);
-        }
-      ],
-    ],
-  ]);
+  register_rest_route('readdy/v1', '/posts/(?P<id>\d+)/like',
+    array_merge($like_args, ['methods' => 'POST', 'callback' => 'readdy_like_post']));
+
+  register_rest_route('readdy/v1', '/posts/(?P<id>\d+)/unlike',
+    array_merge($like_args, ['methods' => 'POST', 'callback' => 'readdy_unlike_post']));
 
   // いいね数をREST APIレスポンスに追加
   register_rest_field('post', 'likes_count', [
@@ -207,33 +164,16 @@ add_action('rest_api_init', function () {
     'schema' => ['type' => 'integer'],
   ]);
 
-  // コメント投稿用カスタムエンドポイント（認証不要）
+  // コメント投稿
   register_rest_route('readdy/v1', '/posts/(?P<id>\d+)/comments', [
     'methods' => 'POST',
     'callback' => 'readdy_submit_comment',
     'permission_callback' => '__return_true',
     'args' => [
-      'id' => [
-        'required' => true,
-        'validate_callback' => function($param) {
-          return is_numeric($param);
-        }
-      ],
-      'author_name' => [
-        'required' => true,
-        'sanitize_callback' => 'sanitize_text_field',
-      ],
-      'author_email' => [
-        'required' => true,
-        'sanitize_callback' => 'sanitize_email',
-        'validate_callback' => function($param) {
-          return is_email($param);
-        }
-      ],
-      'content' => [
-        'required' => true,
-        'sanitize_callback' => 'sanitize_textarea_field',
-      ],
+      'id' => ['required' => true, 'validate_callback' => 'is_numeric'],
+      'author_name' => ['required' => true, 'sanitize_callback' => 'sanitize_text_field'],
+      'author_email' => ['required' => true, 'sanitize_callback' => 'sanitize_email', 'validate_callback' => 'is_email'],
+      'content' => ['required' => true, 'sanitize_callback' => 'sanitize_textarea_field'],
     ],
   ]);
 });
@@ -241,77 +181,43 @@ add_action('rest_api_init', function () {
 /* ========== いいね機能 ========== */
 function readdy_like_post($request) {
   $post_id = $request['id'];
-
-  if (!get_post($post_id)) {
-    return new WP_Error('invalid_post', 'Invalid post ID', ['status' => 404]);
-  }
+  if (!get_post($post_id)) return new WP_Error('invalid_post', 'Invalid post ID', ['status' => 404]);
 
   $like_key = 'readdy_liked_' . $post_id;
+  if (isset($_COOKIE[$like_key])) return new WP_Error('already_liked', 'Already liked', ['status' => 400]);
 
-  if (isset($_COOKIE[$like_key])) {
-    return new WP_Error('already_liked', 'Already liked this post', ['status' => 400]);
-  }
-
-  $current_likes = (int) get_post_meta($post_id, '_readdy_likes_count', true);
-  $new_likes = $current_likes + 1;
-  update_post_meta($post_id, '_readdy_likes_count', $new_likes);
-
+  $likes = (int) get_post_meta($post_id, '_readdy_likes_count', true) + 1;
+  update_post_meta($post_id, '_readdy_likes_count', $likes);
   setcookie($like_key, '1', time() + (30 * 24 * 60 * 60), '/');
 
-  return [
-    'success' => true,
-    'likes_count' => $new_likes,
-    'message' => 'Post liked successfully'
-  ];
+  return ['success' => true, 'likes_count' => $likes];
 }
 
 function readdy_unlike_post($request) {
   $post_id = $request['id'];
-
-  if (!get_post($post_id)) {
-    return new WP_Error('invalid_post', 'Invalid post ID', ['status' => 404]);
-  }
+  if (!get_post($post_id)) return new WP_Error('invalid_post', 'Invalid post ID', ['status' => 404]);
 
   $like_key = 'readdy_liked_' . $post_id;
+  if (!isset($_COOKIE[$like_key])) return new WP_Error('not_liked', 'Not liked yet', ['status' => 400]);
 
-  if (!isset($_COOKIE[$like_key])) {
-    return new WP_Error('not_liked', 'Post not liked yet', ['status' => 400]);
-  }
-
-  $current_likes = (int) get_post_meta($post_id, '_readdy_likes_count', true);
-  $new_likes = max(0, $current_likes - 1);
-  update_post_meta($post_id, '_readdy_likes_count', $new_likes);
-
+  $likes = max(0, (int) get_post_meta($post_id, '_readdy_likes_count', true) - 1);
+  update_post_meta($post_id, '_readdy_likes_count', $likes);
   setcookie($like_key, '', time() - 3600, '/');
 
-  return [
-    'success' => true,
-    'likes_count' => $new_likes,
-    'message' => 'Post unliked successfully'
-  ];
+  return ['success' => true, 'likes_count' => $likes];
 }
 
-/* ========== コメント投稿機能（認証不要） ========== */
+/* ========== コメント投稿 ========== */
 function readdy_submit_comment($request) {
   $post_id = $request['id'];
-  $author_name = $request['author_name'];
-  $author_email = $request['author_email'];
-  $content = $request['content'];
+  if (!get_post($post_id)) return new WP_Error('invalid_post', 'Invalid post ID', ['status' => 404]);
+  if (!comments_open($post_id)) return new WP_Error('comments_closed', 'Comments closed', ['status' => 403]);
 
-  $post = get_post($post_id);
-  if (!$post) {
-    return new WP_Error('invalid_post', 'Invalid post ID', ['status' => 404]);
-  }
-
-  if (!comments_open($post_id)) {
-    return new WP_Error('comments_closed', 'Comments are closed for this post', ['status' => 403]);
-  }
-
-  $comment_data = [
+  $comment_id = wp_insert_comment([
     'comment_post_ID' => $post_id,
-    'comment_author' => $author_name,
-    'comment_author_email' => $author_email,
-    'comment_content' => $content,
+    'comment_author' => $request['author_name'],
+    'comment_author_email' => $request['author_email'],
+    'comment_content' => $request['content'],
     'comment_type' => 'comment',
     'comment_parent' => 0,
     'user_id' => 0,
@@ -319,20 +225,11 @@ function readdy_submit_comment($request) {
     'comment_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
     'comment_date' => current_time('mysql'),
     'comment_approved' => 0,
-  ];
+  ]);
 
-  $comment_id = wp_insert_comment($comment_data);
+  if (!$comment_id) return new WP_Error('comment_failed', 'Failed to submit', ['status' => 500]);
 
-  if (!$comment_id) {
-    return new WP_Error('comment_failed', 'Failed to submit comment', ['status' => 500]);
-  }
-
-  return [
-    'success' => true,
-    'comment_id' => $comment_id,
-    'message' => 'Comment submitted successfully and is awaiting moderation',
-    'status' => 'pending'
-  ];
+  return ['success' => true, 'comment_id' => $comment_id, 'status' => 'pending'];
 }
 
 /* ========== サイト設定取得 ========== */
@@ -366,30 +263,26 @@ function readdy_get_site_config() {
   ];
 }
 
-/* ========== カスタムURL用のリライトルール ========== */
+/* ========== カスタムページ用リライトルール（パーマリンク設定不問） ========== */
 add_action('init', function() {
-  add_rewrite_rule('^categories/?$', 'index.php?custom_page=categories', 'top');
-  add_rewrite_rule('^about/?$', 'index.php?custom_page=about', 'top');
-  add_rewrite_rule('^contact/?$', 'index.php?custom_page=contact', 'top');
-  add_rewrite_rule('^privacy/?$', 'index.php?custom_page=privacy', 'top');
-  add_rewrite_rule('^terms/?$', 'index.php?custom_page=terms', 'top');
-  add_rewrite_rule('^rss/?$', 'index.php?custom_page=rss', 'top');
-});
+  add_rewrite_rule('^categories/?$', 'index.php?pagename=categories', 'top');
+  add_rewrite_rule('^about/?$', 'index.php?pagename=about', 'top');
+  add_rewrite_rule('^contact/?$', 'index.php?pagename=contact', 'top');
+  add_rewrite_rule('^privacy/?$', 'index.php?pagename=privacy', 'top');
+  add_rewrite_rule('^terms/?$', 'index.php?pagename=terms', 'top');
+  add_rewrite_rule('^rss/?$', 'index.php?pagename=rss', 'top');
+}, 1);
 
 add_action('after_switch_theme', function() {
   flush_rewrite_rules();
 });
 
-add_filter('query_vars', function($vars) {
-  $vars[] = 'custom_page';
-  return $vars;
-});
+add_filter('template_include', function($template) {
+  $pagename = get_query_var('pagename');
 
-add_action('template_include', function($template) {
-  $custom_page = get_query_var('custom_page');
-
-  if ($custom_page) {
-    $template_file = 'page-' . $custom_page . '.php';
+  $custom_pages = ['categories', 'about', 'contact', 'privacy', 'terms', 'rss'];
+  if (in_array($pagename, $custom_pages)) {
+    $template_file = 'page-' . $pagename . '.php';
     $new_template = locate_template([$template_file]);
     if ($new_template) {
       return $new_template;

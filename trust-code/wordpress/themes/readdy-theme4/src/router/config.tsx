@@ -1,7 +1,6 @@
 import type { RouteObject } from "react-router-dom";
 import Layout from "../components/Layout";
 import NotFound from "../pages/NotFound";
-import TopPage from "../pages/top/page";
 import Home from "../pages/home/page";
 import Categories from "../pages/categories/page";
 import Tags from "../pages/tags/page";
@@ -10,14 +9,19 @@ import Contact from "../pages/contact/page";
 import Privacy from "../pages/privacy/page";
 import Terms from "../pages/terms/page";
 import RSS from "../pages/rss/page";
+import SinglePost from "../pages/single/page";
 
 const routes: RouteObject[] = [
   {
     path: "/",
-    element: <Layout><TopPage /></Layout>,
+    element: <Layout><Home /></Layout>,
   },
   {
-    path: "/blog",
+    path: "/post/:id",
+    element: <Layout><SinglePost /></Layout>,
+  },
+  {
+    path: "/category/:id",
     element: <Layout><Home /></Layout>,
   },
   {
