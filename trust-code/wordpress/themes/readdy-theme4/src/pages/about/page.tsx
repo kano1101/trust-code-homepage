@@ -15,8 +15,7 @@ export default function AboutPage() {
     { name: 'プログラミング', icon: 'ri-code-line', color: 'text-purple-600' },
     { name: '自己啓発', icon: 'ri-lightbulb-line', color: 'text-yellow-600' },
     { name: 'アクアリウム', icon: 'ri-water-percent-line', color: 'text-blue-600' },
-    { name: 'ガジェット', icon: 'ri-smartphone-line', color: 'text-green-600' },
-    { name: 'AI・IT', icon: 'ri-robot-line', color: 'text-red-600' }
+    { name: 'ガジェット', icon: 'ri-smartphone-line', color: 'text-green-600' }
   ];
 
   const timeline = [
@@ -66,7 +65,7 @@ export default function AboutPage() {
               <i className="ri-star-line mr-3 text-purple-600"></i>
               興味・関心
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {skills.map((skill, index) => (
                 <div
                   key={index}

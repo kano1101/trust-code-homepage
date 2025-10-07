@@ -176,6 +176,19 @@ add_action('rest_api_init', function () {
       'content' => ['required' => true, 'sanitize_callback' => 'sanitize_textarea_field'],
     ],
   ]);
+
+  // お問い合わせフォーム
+  register_rest_route('readdy/v1', '/contact', [
+    'methods' => 'POST',
+    'callback' => 'readdy_submit_contact',
+    'permission_callback' => '__return_true',
+    'args' => [
+      'name' => ['required' => true, 'sanitize_callback' => 'sanitize_text_field'],
+      'email' => ['required' => true, 'sanitize_callback' => 'sanitize_email', 'validate_callback' => 'is_email'],
+      'subject' => ['required' => true, 'sanitize_callback' => 'sanitize_text_field'],
+      'message' => ['required' => true, 'sanitize_callback' => 'sanitize_textarea_field'],
+    ],
+  ]);
 });
 
 /* ========== いいね機能 ========== */
@@ -230,6 +243,56 @@ function readdy_submit_comment($request) {
   if (!$comment_id) return new WP_Error('comment_failed', 'Failed to submit', ['status' => 500]);
 
   return ['success' => true, 'comment_id' => $comment_id, 'status' => 'pending'];
+}
+
+/* ========== お問い合わせフォーム送信 ========== */
+function readdy_submit_contact($request) {
+  try {
+    $name = $request['name'];
+    $email = $request['email'];
+    $subject = $request['subject'];
+    $message = $request['message'];
+
+    // 管理者メールアドレス
+    $admin_email = get_option('admin_email');
+
+    // メール本文
+    $email_body = "お問い合わせがありました。\n\n";
+    $email_body .= "名前: {$name}\n";
+    $email_body .= "メールアドレス: {$email}\n";
+    $email_body .= "件名: {$subject}\n\n";
+    $email_body .= "メッセージ:\n{$message}\n";
+
+    // 開発環境判定（localhost または WP_DEBUG）
+    $is_dev = (
+      (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false) ||
+      (defined('WP_DEBUG') && WP_DEBUG)
+    );
+
+    if ($is_dev) {
+      // 開発環境: ログに記録
+      error_log("=== お問い合わせフォーム送信 ===");
+      error_log("To: {$admin_email}");
+      error_log("Subject: 【Trust Code】{$subject}");
+      error_log($email_body);
+      error_log("================================");
+
+      return rest_ensure_response(['success' => true, 'message' => 'Contact form logged (dev mode)']);
+    } else {
+      // 本番環境: メール送信
+      $headers = ['Content-Type: text/plain; charset=UTF-8'];
+      $mail_sent = wp_mail($admin_email, "【Trust Code】{$subject}", $email_body, $headers);
+
+      if (!$mail_sent) {
+        return new WP_Error('mail_failed', 'Failed to send email', ['status' => 500]);
+      }
+
+      return rest_ensure_response(['success' => true, 'message' => 'Email sent successfully']);
+    }
+  } catch (Exception $e) {
+    error_log("Contact form error: " . $e->getMessage());
+    return new WP_Error('server_error', $e->getMessage(), ['status' => 500]);
+  }
 }
 
 /* ========== サイト設定取得 ========== */
