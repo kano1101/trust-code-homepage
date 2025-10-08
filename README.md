@@ -17,7 +17,7 @@ WordPressの開発・本番環境を Docker で管理するプロジェクト
 - 環境設定: `.env.local`
 
 ### 2. 本番環境（NAS）
-- アクセス: `https://trust-code.net/wp-admin`
+- アクセス: `https://trust-code.net`
 - nginx設定: `nginx/conf.d/production.conf` を使用
 - 環境設定: `.env.production`
 
@@ -28,7 +28,6 @@ WordPressの開発・本番環境を Docker で管理するプロジェクト
 1. リポジトリをクローン
 2. イメージをビルド（初回のみ）:
    ```bash
-   cd trust-code
    docker-compose build
    ```
 
@@ -45,14 +44,11 @@ WordPressの開発・本番環境を Docker で管理するプロジェクト
 
 1. ローカルでイメージをビルド＆プッシュ:
    ```bash
-   cd trust-code
    ./build-and-push.sh
    ```
 
 2. NASで以下を実行:
    ```bash
-   cd trust-code
-
    # nginx設定を本番用に切り替え
    mv nginx/conf.d/default.conf nginx/conf.d/default.conf.dev
    mv nginx/conf.d/production.conf nginx/conf.d/default.conf
@@ -65,7 +61,7 @@ WordPressの開発・本番環境を Docker で管理するプロジェクト
 #### 方法2: ローカルでビルド
 
 ```bash
-cd trust-code
+# 本番環境起動
 docker-compose -f docker-compose.production.yml --env-file .env.production up -d --build
 ```
 
@@ -151,26 +147,6 @@ docker-compose --env-file .env.local up -d --force-recreate wordpress
 docker-compose down
 docker volume rm trust-code_wp_html
 docker-compose --env-file .env.local up -d
-```
-
-### MySQLのやり直しの際に必要なコード
-
-```bash
-# DBコンテナ内で、wp_user のパスワードを WordPress と同じにする
-docker compose exec db mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "
-ALTER USER 'wp_user'@'%' IDENTIFIED WITH mysql_native_password BY 'change_user_pw';
-FLUSH PRIVILEGES;
-"
-```
-
-### 権限の修正
-```bash
-# 権限チェック
-docker compose exec wordpress bash -lc '
-chown -R www-data:www-data /var/www/html/wp-content &&
-find /var/www/html/wp-content -type d -exec chmod 775 {} \; &&
-find /var/www/html/wp-content -type f -exec chmod 664 {} \;
-'
 ```
 
 ## 注意事項

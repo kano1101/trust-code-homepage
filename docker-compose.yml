@@ -30,8 +30,8 @@ services:
 
   wordpress:
     build:
-      context: ./wordpress
-      dockerfile: Dockerfile
+      context: wordpress
+      dockerfile: wordpress/Dockerfile
     image: akirakano/trust-code-wordpress:latest
     container_name: wp-app
     depends_on:
