@@ -1,11 +1,10 @@
 <?php
 /**
-i * Readdy Theme 4 Functions
+ * Readdy Theme 4 Functions
  * - Viteビルド資産のenqueue
- * - Markdown(ACF: md_body) → HTML 変換
- * - RESTに md_body / md_html 追加
  * - カスタムコメント投稿エンドポイント
  * - いいね機能
+ * - お問い合わせフォーム
  */
 
 /* ========== テーマサポートの設定 ========== */
@@ -74,71 +73,8 @@ function readdy_theme_assets() {
 }
 add_action('wp_enqueue_scripts', 'readdy_theme_assets');
 
-/* ========== Markdown変換 ========== */
-function rtheme_get_parsedown() {
-  static $parser = null;
-  if ($parser) return $parser;
-
-  require_once get_template_directory() . '/inc/Parsedown.php';
-  $extra = get_template_directory() . '/inc/ParsedownExtra.php';
-  if (file_exists($extra)) {
-    require_once $extra;
-    $parser = new ParsedownExtra();
-  } else {
-    $parser = new Parsedown();
-  }
-  $parser->setSafeMode(true);
-  return $parser;
-}
-
-function rtheme_get_md_body($post_id) {
-  return function_exists('get_field') && ($md = get_field('md_body', $post_id))
-    ? $md
-    : (get_post_meta($post_id, 'md_body', true) ?: '');
-}
-
-function rtheme_render_markdown($md, $post_id) {
-  $hash = md5($md);
-  $cached = get_post_meta($post_id, '_md_html_cache', true);
-
-  if (is_array($cached) && ($cached['hash'] ?? '') === $hash) {
-    return $cached['html'];
-  }
-
-  $rendered = wp_kses_post(rtheme_get_parsedown()->text($md));
-  update_post_meta($post_id, '_md_html_cache', ['hash' => $hash, 'html' => $rendered]);
-  return $rendered;
-}
-
-add_filter('the_content', function ($html) {
-  global $post;
-  if (empty($post->ID) || !($md = rtheme_get_md_body($post->ID))) return $html;
-  return rtheme_render_markdown($md, $post->ID);
-}, 9);
-
-add_action('updated_post_meta', function ($meta_id, $post_id, $meta_key) {
-  if ($meta_key === 'md_body') delete_post_meta($post_id, '_md_html_cache');
-}, 10, 3);
-
-add_action('acf/save_post', function ($post_id) {
-  if (get_post_type($post_id) === 'post') delete_post_meta($post_id, '_md_html_cache');
-}, 20);
-
 /* ========== REST APIエンドポイント ========== */
 add_action('rest_api_init', function () {
-  register_rest_field('post', 'md_body', [
-    'get_callback' => fn($obj) => rtheme_get_md_body($obj['id']),
-    'schema' => ['type' => 'string'],
-  ]);
-
-  register_rest_field('post', 'md_html', [
-    'get_callback' => function ($obj) {
-      $md = rtheme_get_md_body($obj['id']);
-      return $md ? rtheme_render_markdown($md, $obj['id']) : null;
-    },
-    'schema' => ['type' => 'string'],
-  ]);
-
   // サイト設定エンドポイント
   register_rest_route('readdy/v1', '/site-config', [
     'methods' => 'GET',
