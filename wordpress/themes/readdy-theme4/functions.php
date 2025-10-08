@@ -22,6 +22,12 @@ function readdy_theme_setup() {
 }
 add_action('after_setup_theme', 'readdy_theme_setup');
 
+/* ========== Excerpt（抜粋）のカスタマイズ ========== */
+// [...]を...に変更
+add_filter('excerpt_more', function($more) {
+  return '...';
+});
+
 /* ========== WordPressデフォルトスタイルを無効化 ========== */
 function readdy_remove_wp_styles() {
   wp_dequeue_style('wp-block-library');
@@ -147,12 +153,26 @@ add_action('rest_api_init', function () {
     'permission_callback' => '__return_true'
   ]);
 
-  // Simple Like Plugin用のいいね数をREST APIレスポンスに追加
+  // Simple Like Page Plugin用のいいね数をREST APIレスポンスに追加
   register_rest_field('post', 'likes_count', [
     'get_callback' => function($obj) {
-      // Simple Like Pluginのメタデータキーを確認
-      $likes = get_post_meta($obj['id'], '_post_like_count', true);
-      return $likes ? (int) $likes : 0;
+      // Simple Like Page Pluginのメタデータキーをチェック（複数の可能性）
+      $possible_keys = [
+        '_simple_likes_count',
+        '_slp_likes_count',
+        'simple_like_page_count',
+        '_post_like_count',
+        'post_like_count'
+      ];
+
+      foreach ($possible_keys as $key) {
+        $likes = get_post_meta($obj['id'], $key, true);
+        if ($likes) {
+          return (int) $likes;
+        }
+      }
+
+      return 0;
     },
     'schema' => ['type' => 'integer'],
   ]);
@@ -272,7 +292,8 @@ function readdy_get_site_config() {
       'name' => get_option('readdy_author_name', 'Aqun'),
       'role' => get_option('readdy_author_role', 'ケーキ屋の社内エンジニア'),
       'avatar' => get_option('readdy_author_avatar', 'A'),
-      'bio' => get_option('readdy_author_bio', 'ケーキ屋の社内エンジニア\n1989年11月1日生'),
+      'bio' => get_option('readdy_author_bio', 'ケーキ屋の社内エンジニア'),
+      'birthdate' => get_option('readdy_author_birthdate', '1989年11月1日生'),
     ],
     'theme' => [
       'primaryColor' => get_option('readdy_theme_primary_color', '#7C3AED'),
