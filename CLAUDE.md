@@ -87,7 +87,9 @@
 - **スタイリング**: Tailwind CSS
 - **多言語対応**: i18next
 - **ルーティング**: React Router DOM
-- **マークダウン**: WordPressの標準エディタを使用（Parsedownは削除済み）
+- **マークダウン**: Parsedown + ParsedownExtra（公式版、inc/ディレクトリに配置）
+  - ACFカスタムフィールド `md_body` でMarkdown記述可能
+  - REST APIで `md_body` と `md_html` フィールドを提供
 
 ### ページ構成
 
@@ -109,10 +111,11 @@
 ### 機能要件
 
 #### コア機能
-- **いいね機能**: カスタム実装（REST API + Cookie）
-  - バックエンド: `functions.php` で `/readdy/v1/posts/{id}/like` と `/readdy/v1/posts/{id}/unlike` エンドポイントを実装
-  - フロントエンド: `usePostLikes` フックで状態管理
-  - Cookieベースで重複いいねを防止
+- **いいね機能**: Simple Like Plugin を使用
+  - プラグイン: [Simple Like](https://wordpress.org/plugins/simple-like/)
+  - インストール後、記事に自動的にいいねボタンが表示される
+  - フロントエンド: `functions.php` でREST APIに `likes_count` フィールドを追加
+  - single/page.tsxにプレースホルダーを配置（プラグインが自動挿入）
 - **コメント機能**: WordPress標準コメント機能 + カスタムREST API
   - ログイン不要
   - 管理者承認制
@@ -385,12 +388,16 @@ docker-compose exec db mysql -u root -p${MYSQL_ROOT_PASSWORD} wordpress_db < /tm
 ## プラグイン構成
 
 ### 必須プラグイン
-1. **Akismet Anti-spam**: スパムコメント対策
-2. **WP Super Cache** または **W3 Total Cache**: キャッシュ（検討中）
+1. **Simple Like**: いいね機能
+   - インストール方法: WordPressダッシュボード → プラグイン → 新規追加 → "Simple Like" で検索してインストール
+   - 有効化後、記事に自動的にいいねボタンが追加される
+2. **Akismet Anti-spam**: スパムコメント対策
+3. **WP Super Cache** または **W3 Total Cache**: キャッシュ（検討中）
 
 ### カスタム実装機能
-1. **いいね機能**: カスタムREST APIで実装（`functions.php`）
-2. **お問い合わせフォーム**: カスタムREST APIで実装（`functions.php` + `/readdy/v1/contact`）
+1. **お問い合わせフォーム**: カスタムREST APIで実装（`functions.php` + `/readdy/v1/contact`）
+2. **Markdown対応**: Parsedown + ParsedownExtra（`inc/`ディレクトリに配置）
+3. **コメント投稿API**: `/readdy/v1/posts/{id}/comments` エンドポイント
 
 ### 推奨プラグイン
 - **Yoast SEO** または **Rank Math**: SEO対策
@@ -512,3 +519,28 @@ homepage/
 **その他**:
 - Gitコミットメッセージガイドラインを追加（日本語使用、Claude Code署名）
 - 技術スタックを更新（Firebase, Supabase, Stripeは削除済み）
+
+#### Markdown対応の再追加とSimple Like Pluginへの切り替え
+**コミット**: `fdf1cc6` - "Markdown対応を再追加、Simple Like Pluginに切り替え、表示問題を修正"
+
+**Markdown対応の再追加**:
+- 公式ParsedownとParsedownExtraをGitHubから再ダウンロード（inc/ディレクトリに配置）
+- functions.phpにMarkdown変換機能を再追加
+  - `rtheme_get_parsedown()`, `rtheme_get_md_body()`, `rtheme_render_markdown()` 関数
+  - ACFカスタムフィールド `md_body` からのMarkdown読み込み
+  - キャッシュ機能（`_md_html_cache` メタデータ）
+  - REST APIに `md_body` と `md_html` フィールドを追加
+
+**Simple Like Pluginへの切り替え**:
+- カスタムいいねAPIエンドポイント（`/readdy/v1/posts/{id}/like` と `/readdy/v1/posts/{id}/unlike`）を削除
+- カスタムいいね関数（`readdy_like_post()`, `readdy_unlike_post()`）を削除
+- single/page.tsxから `usePostLikes` フックの使用を削除
+- single/page.tsxにSimple Like Pluginのプレースホルダーを追加
+- functions.phpで `likes_count` フィールドをSimple Like Pluginのメタデータ（`_post_like_count`）に変更
+
+**Aboutページの修正**:
+- `src/pages/about/page.tsx`: bio（"ケーキ屋の社内エンジニア"）とbirthdate（"1989年11月1日生"）を `<br />` で改行
+- 別々の `<p>` タグではなく、1つの `<p>` タグ内で `<br />` を使用
+
+**確認済み**:
+- BlogCardの抜粋は既に「...」表示（「[...]」ではない）
