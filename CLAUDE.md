@@ -87,7 +87,7 @@
 - **スタイリング**: Tailwind CSS
 - **多言語対応**: i18next
 - **ルーティング**: React Router DOM
-- **その他**: Firebase, Supabase, Stripe (将来的な拡張用)
+- **マークダウン**: WordPressの標準エディタを使用（Parsedownは削除済み）
 
 ### ページ構成
 
@@ -109,10 +109,14 @@
 ### 機能要件
 
 #### コア機能
-- **いいね機能**: Simple Like Plugin を使用
-- **コメント機能**: WordPress標準コメント機能
+- **いいね機能**: カスタム実装（REST API + Cookie）
+  - バックエンド: `functions.php` で `/readdy/v1/posts/{id}/like` と `/readdy/v1/posts/{id}/unlike` エンドポイントを実装
+  - フロントエンド: `usePostLikes` フックで状態管理
+  - Cookieベースで重複いいねを防止
+- **コメント機能**: WordPress標準コメント機能 + カスタムREST API
   - ログイン不要
   - 管理者承認制
+  - `/readdy/v1/posts/{id}/comments` エンドポイントでフォーム送信
 
 #### デザイン要件
 - レスポンシブデザイン（モバイル対応）
@@ -261,6 +265,37 @@ git add wordpress/themes/readdy-theme4
 git commit -m "Update readdy-theme4 submodule"
 ```
 
+### Gitコミットメッセージのガイドライン
+
+#### 基本ルール
+- **言語**: 日本語を使用
+- **形式**: 簡潔な要約 + 詳細（必要に応じて）
+- **署名**: Claude Codeで生成したコミットには以下を含める
+  ```
+  🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  ```
+
+#### コミットメッセージ例
+```bash
+# 良い例
+git commit -m "不要なファイルを削除、Aboutページの表示問題を修正
+
+主な変更:
+- 不要なファイル削除: build-quick.sh, Parsedown関連ファイル
+- functions.phpからMarkdown関連コードを削除
+- Aboutページのbio表示問題を修正
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+
+# 避けるべき例
+git commit -m "fix"
+git commit -m "Update files"
+```
+
 ---
 
 ## データ管理
@@ -350,10 +385,12 @@ docker-compose exec db mysql -u root -p${MYSQL_ROOT_PASSWORD} wordpress_db < /tm
 ## プラグイン構成
 
 ### 必須プラグイン
-1. **Simple Like Plugin**: いいね機能
-2. **Akismet Anti-spam**: スパムコメント対策
-3. **WP Super Cache** または **W3 Total Cache**: キャッシュ（検討中）
-4. **Contact Form 7**: お問い合わせフォーム（Contactページ用）
+1. **Akismet Anti-spam**: スパムコメント対策
+2. **WP Super Cache** または **W3 Total Cache**: キャッシュ（検討中）
+
+### カスタム実装機能
+1. **いいね機能**: カスタムREST APIで実装（`functions.php`）
+2. **お問い合わせフォーム**: カスタムREST APIで実装（`functions.php` + `/readdy/v1/contact`）
 
 ### 推奨プラグイン
 - **Yoast SEO** または **Rank Math**: SEO対策
@@ -441,4 +478,37 @@ homepage/
 
 ## 変更履歴
 
-- **2025-10-08**: 初版作成（ヒアリング結果を基に）
+### 2025-10-08
+
+#### 初版作成
+- ヒアリング結果を基に要件定義ドキュメントを作成
+
+#### コードクリーンアップとバグ修正
+**コミット**: `7a8c046` - "不要なコードとファイルを削除、Aboutページの表示問題を修正"
+
+**削除したファイル**:
+- `build-quick.sh`: 簡易ビルドスクリプト（`deploy-dev.sh`に統合済み）
+- `inc/Parsedown.php`: Markdownパーサー（不要、WordPressの標準エディタを使用）
+- `inc/ParsedownExtra.php`: Parsedown拡張機能（不要）
+- `src/data/posts.ts`: 静的ブログデータ（WordPress REST APIに移行済み）
+- `src/pages/home/components/BlogPost.tsx`: 重複コンポーネント（BlogCardに統合）
+- `src/pages/top/page.tsx`: 未使用のトップページ
+
+**functions.phpの変更**:
+- Markdown変換関連のコードを完全削除（70行以上削減）
+- `rtheme_get_parsedown()`, `rtheme_get_md_body()`, `rtheme_render_markdown()` 関数を削除
+- REST APIから `md_body` と `md_html` フィールドを削除
+- コメントヘッダーを更新してMarkdown関連の記述を削除
+
+**Aboutページの修正**:
+- `src/pages/about/page.tsx`: bio（"ケーキ屋の社内エンジニア"）と birthdate（"1989年11月1日生"）を別々の `<p>` タグに分割
+- `\n` エスケープ文字が表示される問題を解決
+
+**いいね機能の確認**:
+- バックエンド: `functions.php` の `/readdy/v1/posts/{id}/like` と `/readdy/v1/posts/{id}/unlike` エンドポイントが正常に実装されていることを確認
+- フロントエンド: `src/hooks/usePostLikes.ts` が正常に機能することを確認
+- UI: `src/pages/single/page.tsx` でいいねボタンが正しく表示されることを確認
+
+**その他**:
+- Gitコミットメッセージガイドラインを追加（日本語使用、Claude Code署名）
+- 技術スタックを更新（Firebase, Supabase, Stripeは削除済み）
