@@ -48,9 +48,16 @@ export default function AboutPage() {
             <h1 className="text-4xl md:text-5xl font-bold text-purple-900 mb-4">
               {author.name}
             </h1>
-            <div className="text-xl text-purple-700 space-y-1">
-              <p>{author.bio}</p>
-              {author.birthdate && <p>{author.birthdate}</p>}
+            <div className="text-xl text-purple-700">
+              <p>
+                {author.bio}
+                {author.birthdate && (
+                  <>
+                    <br />
+                    {author.birthdate}
+                  </>
+                )}
+              </p>
             </div>
           </div>
 

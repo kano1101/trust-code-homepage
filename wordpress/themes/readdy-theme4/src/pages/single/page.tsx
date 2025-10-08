@@ -1,5 +1,4 @@
 import { useParams } from 'react-router-dom';
-import { usePostLikes } from '../../hooks/usePostLikes';
 import { useWordPressComments } from '../../hooks/useWordPressComments';
 import { useState, useEffect } from 'react';
 import Sidebar from '../home/components/Sidebar';
@@ -29,7 +28,6 @@ export default function SinglePost() {
         setLoading(false);
       });
   }, [id]);
-  const { likesCount, isLiked, toggleLike } = usePostLikes(post?.id || null);
   const { comments, submitComment } = useWordPressComments(post?.id || null);
 
   const [commentForm, setCommentForm] = useState({
@@ -153,22 +151,16 @@ export default function SinglePost() {
               dangerouslySetInnerHTML={{ __html: post.content.rendered }}
             />
 
-            {/* Like Button */}
+            {/* Like Button (Simple Like Plugin) */}
             <div className="flex items-center justify-center py-6 border-y border-purple-100">
-              <button
-                onClick={toggleLike}
-                className={`flex items-center space-x-2 px-6 py-3 rounded-full transition-all ${
-                  isLiked
-                    ? 'bg-red-500 text-white hover:bg-red-600'
-                    : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                }`}
-              >
-                <i className={`${isLiked ? 'ri-heart-fill' : 'ri-heart-line'} text-xl`}></i>
-                <span className="font-medium">
-                  {isLiked ? 'いいね済み' : 'いいね'}
-                  {likesCount > 0 && ` (${likesCount})`}
-                </span>
-              </button>
+              {/*
+                Simple Like Pluginがインストールされている場合、
+                プラグインが自動的にいいねボタンを表示します。
+                または、single.phpテンプレートでショートコード [jmliker] を使用してください。
+              */}
+              <div id="simple-likes-wrapper" className="simple-likes-wrapper" data-post-id={post.id}>
+                {/* プラグインがここにいいねボタンを挿入します */}
+              </div>
             </div>
 
             {/* Comments Section */}
