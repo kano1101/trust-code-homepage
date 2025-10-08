@@ -6,16 +6,16 @@ export default function AboutPage() {
 
   const author = config?.author || {
     name: 'Aqun',
-    bio: 'ケーキ屋の社内エンジニア\n1989年11月1日生',
+    bio: 'ケーキ屋の社内エンジニア\n1989年11月1日生まれ',
     description: 'プログラマ、花屋、医療従事者を経て現在のケーキ屋社内エンジニアとして活動。自己啓発とテクノロジーの融合を追求。',
     avatar: 'A'
   };
 
   const skills = [
-    { name: 'プログラミング', icon: 'ri-code-line', color: 'text-purple-600' },
-    { name: '自己啓発', icon: 'ri-lightbulb-line', color: 'text-yellow-600' },
-    { name: 'アクアリウム', icon: 'ri-water-percent-line', color: 'text-blue-600' },
-    { name: 'ガジェット', icon: 'ri-smartphone-line', color: 'text-green-600' }
+    { name: 'プログラミング', icon: 'ri-code-line', color: 'text-purple-600', href: '/categories' },
+    { name: '自己啓発', icon: 'ri-lightbulb-line', color: 'text-yellow-600', href: '/categories' },
+    { name: 'アクアリウム', icon: 'ri-water-percent-line', color: 'text-blue-600', href: '/categories' },
+    { name: 'ガジェット', icon: 'ri-smartphone-line', color: 'text-green-600', href: '/categories' }
   ];
 
   const timeline = [
@@ -67,13 +67,14 @@ export default function AboutPage() {
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {skills.map((skill, index) => (
-                <div
+                <a
                   key={index}
-                  className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 text-center hover:shadow-md transition-shadow"
+                  href={skill.href}
+                  className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 text-center hover:shadow-md hover:scale-105 transition-all cursor-pointer"
                 >
                   <i className={`${skill.icon} text-4xl ${skill.color} mb-2 block`}></i>
                   <p className="text-purple-900 font-semibold">{skill.name}</p>
-                </div>
+                </a>
               ))}
             </div>
           </div>

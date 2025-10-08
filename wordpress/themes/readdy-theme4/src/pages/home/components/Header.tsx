@@ -57,7 +57,7 @@ export default function Header() {
                 onClick={() => setIsCategoryOpen(!isCategoryOpen)}
                 className="font-medium text-purple-700 hover:text-purple-900 transition-colors flex items-center space-x-1"
               >
-                <span>カテゴリ</span>
+                <span>Category</span>
                 <i className={`ri-arrow-down-s-line transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`}></i>
               </button>
 
