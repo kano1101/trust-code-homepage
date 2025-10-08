@@ -1,11 +1,13 @@
-version: "3.8"
-
 networks:
   web:
 
 volumes:
   db_data_dev:
+    external: true
+    name: trust-code_db_data_dev
   wp_html_dev:
+    external: true
+    name: trust-code_wp_html_dev
 
 services:
   db:
@@ -31,7 +33,7 @@ services:
   wordpress:
     build:
       context: wordpress
-      dockerfile: wordpress/Dockerfile
+      dockerfile: Dockerfile
     image: akirakano/trust-code-wordpress:latest
     container_name: wp-app
     depends_on:

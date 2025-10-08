@@ -1,0 +1,23 @@
+# 依存関係
+node_modules/
+
+# ビルド出力
+out/
+dist/
+assets/*.js
+assets/*.css
+assets/*.map
+manifest.json
+
+# 開発用ファイル
+*.log
+.DS_Store
+
+# TypeScript自動生成
+auto-imports.d.ts
+
+# 一時ファイル
+*.tmp
+*.swp
+*.swo
+*~
