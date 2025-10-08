@@ -153,54 +153,23 @@ add_action('rest_api_init', function () {
     'permission_callback' => '__return_true'
   ]);
 
-  // Simple Like Page Plugin用のいいね数をREST APIレスポンスに追加
+  // いいね数をREST APIレスポンスに追加
   register_rest_field('post', 'likes_count', [
-    'get_callback' => function($obj) {
-      // Simple Like Page Pluginのメタデータキーをチェック（複数の可能性）
-      $possible_keys = [
-        '_simple_likes_count',
-        '_slp_likes_count',
-        'simple_like_page_count',
-        '_post_like_count',
-        'post_like_count'
-      ];
-
-      foreach ($possible_keys as $key) {
-        $likes = get_post_meta($obj['id'], $key, true);
-        if ($likes) {
-          return (int) $likes;
-        }
-      }
-
-      return 0;
-    },
+    'get_callback' => fn($obj) => (int) get_post_meta($obj['id'], '_readdy_likes_count', true),
     'schema' => ['type' => 'integer'],
   ]);
 
-  // いいねボタンのHTMLをREST APIで返す
-  register_rest_field('post', 'like_button_html', [
-    'get_callback' => function($obj) {
-      // 複数のショートコードを試す
-      $shortcodes = [
-        '[jmliker]',
-        '[simple_like]',
-        '[slp_like_button]',
-        '[simple_like_page]'
-      ];
+  // いいね機能のAPIエンドポイント
+  $like_args = [
+    'permission_callback' => '__return_true',
+    'args' => ['id' => ['validate_callback' => 'is_numeric']],
+  ];
 
-      foreach ($shortcodes as $shortcode) {
-        $html = do_shortcode($shortcode);
-        // ショートコード自体が返ってこなければ成功
-        if ($html !== $shortcode && !empty($html)) {
-          return $html;
-        }
-      }
+  register_rest_route('readdy/v1', '/posts/(?P<id>\d+)/like',
+    array_merge($like_args, ['methods' => 'POST', 'callback' => 'readdy_like_post']));
 
-      // どのショートコードも動作しない場合、デフォルトのいいねボタンを返す
-      return '<!-- Simple Like Page Plugin not found or no shortcode available -->';
-    },
-    'schema' => ['type' => 'string'],
-  ]);
+  register_rest_route('readdy/v1', '/posts/(?P<id>\d+)/unlike',
+    array_merge($like_args, ['methods' => 'POST', 'callback' => 'readdy_unlike_post']));
 
   // コメント投稿
   register_rest_route('readdy/v1', '/posts/(?P<id>\d+)/comments', [
@@ -252,6 +221,35 @@ function readdy_submit_comment($request) {
   if (!$comment_id) return new WP_Error('comment_failed', 'Failed to submit', ['status' => 500]);
 
   return ['success' => true, 'comment_id' => $comment_id, 'status' => 'pending'];
+}
+
+/* ========== いいね機能 ========== */
+function readdy_like_post($request) {
+  $post_id = $request['id'];
+  if (!get_post($post_id)) return new WP_Error('invalid_post', 'Invalid post ID', ['status' => 404]);
+
+  $like_key = 'readdy_liked_' . $post_id;
+  if (isset($_COOKIE[$like_key])) return new WP_Error('already_liked', 'Already liked', ['status' => 400]);
+
+  $likes = (int) get_post_meta($post_id, '_readdy_likes_count', true) + 1;
+  update_post_meta($post_id, '_readdy_likes_count', $likes);
+  setcookie($like_key, '1', time() + (30 * 24 * 60 * 60), '/');
+
+  return ['success' => true, 'likes_count' => $likes];
+}
+
+function readdy_unlike_post($request) {
+  $post_id = $request['id'];
+  if (!get_post($post_id)) return new WP_Error('invalid_post', 'Invalid post ID', ['status' => 404]);
+
+  $like_key = 'readdy_liked_' . $post_id;
+  if (!isset($_COOKIE[$like_key])) return new WP_Error('not_liked', 'Not liked yet', ['status' => 400]);
+
+  $likes = max(0, (int) get_post_meta($post_id, '_readdy_likes_count', true) - 1);
+  update_post_meta($post_id, '_readdy_likes_count', $likes);
+  setcookie($like_key, '', time() - 3600, '/');
+
+  return ['success' => true, 'likes_count' => $likes];
 }
 
 /* ========== お問い合わせフォーム送信 ========== */

@@ -25,7 +25,6 @@ export interface Post {
     rendered: string;
   };
   _embedded?: any;
-  like_button_html?: string;
 }
 
 export interface Category {
