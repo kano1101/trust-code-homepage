@@ -135,7 +135,21 @@ export default function SinglePost() {
 
             {/* Content */}
             <div
-              className="prose prose-lg max-w-none mb-8"
+              className="prose prose-lg prose-purple max-w-none mb-8
+                prose-headings:text-purple-900
+                prose-h1:text-3xl prose-h1:font-bold prose-h1:mb-4
+                prose-h2:text-2xl prose-h2:font-bold prose-h2:mb-3 prose-h2:mt-8
+                prose-h3:text-xl prose-h3:font-semibold prose-h3:mb-2 prose-h3:mt-6
+                prose-p:text-gray-700 prose-p:leading-relaxed prose-p:mb-4
+                prose-a:text-purple-600 prose-a:no-underline hover:prose-a:text-purple-800 hover:prose-a:underline
+                prose-strong:text-purple-900 prose-strong:font-bold
+                prose-code:text-purple-700 prose-code:bg-purple-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded
+                prose-pre:bg-gray-900 prose-pre:text-gray-100
+                prose-ul:list-disc prose-ul:ml-6 prose-ul:mb-4
+                prose-ol:list-decimal prose-ol:ml-6 prose-ol:mb-4
+                prose-li:text-gray-700 prose-li:mb-1
+                prose-blockquote:border-l-4 prose-blockquote:border-purple-300 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-600
+                prose-img:rounded-lg prose-img:shadow-md"
               dangerouslySetInnerHTML={{ __html: post.content.rendered }}
             />
 

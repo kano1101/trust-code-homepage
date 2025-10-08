@@ -1,21 +1,30 @@
 import { useWordPressConfig } from '../../hooks/useWordPressConfig';
+import { useWordPressCategories } from '../../hooks/useWordPressCategories';
 import PageHero from '../../components/PageHero';
 
 export default function AboutPage() {
   const { config } = useWordPressConfig();
+  const { categories } = useWordPressCategories();
 
   const author = config?.author || {
     name: 'Aqun',
-    bio: 'ケーキ屋の社内エンジニア\n1989年11月1日生まれ',
+    bio: 'ケーキ屋の社内エンジニア',
+    birthdate: '1989年11月1日生まれ',
     description: 'プログラマ、花屋、医療従事者を経て現在のケーキ屋社内エンジニアとして活動。自己啓発とテクノロジーの融合を追求。',
     avatar: 'A'
   };
 
+  // カテゴリ名から対応するカテゴリIDを検索
+  const findCategoryByName = (name: string) => {
+    const category = categories.find(cat => cat.name === name);
+    return category ? `/category/${category.id}` : '/categories';
+  };
+
   const skills = [
-    { name: 'プログラミング', icon: 'ri-code-line', color: 'text-purple-600', href: '/categories' },
-    { name: '自己啓発', icon: 'ri-lightbulb-line', color: 'text-yellow-600', href: '/categories' },
-    { name: 'アクアリウム', icon: 'ri-water-percent-line', color: 'text-blue-600', href: '/categories' },
-    { name: 'ガジェット', icon: 'ri-smartphone-line', color: 'text-green-600', href: '/categories' }
+    { name: 'プログラミング', icon: 'ri-code-line', color: 'text-purple-600', href: findCategoryByName('プログラミング') },
+    { name: '自己啓発', icon: 'ri-lightbulb-line', color: 'text-yellow-600', href: findCategoryByName('自己啓発') },
+    { name: 'アクアリウム', icon: 'ri-water-percent-line', color: 'text-blue-600', href: findCategoryByName('アクアリウム') },
+    { name: 'ガジェット', icon: 'ri-smartphone-line', color: 'text-green-600', href: findCategoryByName('ガジェット') }
   ];
 
   const timeline = [
@@ -39,9 +48,10 @@ export default function AboutPage() {
             <h1 className="text-4xl md:text-5xl font-bold text-purple-900 mb-4">
               {author.name}
             </h1>
-            <p className="text-xl text-purple-700 whitespace-pre-line">
-              {author.bio}
-            </p>
+            <div className="text-xl text-purple-700">
+              <p>{author.bio}</p>
+              <p>{author.birthdate}</p>
+            </div>
           </div>
 
           {/* About Section */}
