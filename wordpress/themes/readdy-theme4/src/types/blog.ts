@@ -12,6 +12,22 @@ export interface BlogPost {
   slug: string;
 }
 
+export interface Post {
+  id: number;
+  date: string;
+  title: {
+    rendered: string;
+  };
+  content: {
+    rendered: string;
+  };
+  excerpt: {
+    rendered: string;
+  };
+  _embedded?: any;
+  like_button_html?: string;
+}
+
 export interface Category {
   name: string;
   count: number;

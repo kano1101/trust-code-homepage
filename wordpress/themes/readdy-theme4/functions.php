@@ -177,6 +177,31 @@ add_action('rest_api_init', function () {
     'schema' => ['type' => 'integer'],
   ]);
 
+  // いいねボタンのHTMLをREST APIで返す
+  register_rest_field('post', 'like_button_html', [
+    'get_callback' => function($obj) {
+      // 複数のショートコードを試す
+      $shortcodes = [
+        '[jmliker]',
+        '[simple_like]',
+        '[slp_like_button]',
+        '[simple_like_page]'
+      ];
+
+      foreach ($shortcodes as $shortcode) {
+        $html = do_shortcode($shortcode);
+        // ショートコード自体が返ってこなければ成功
+        if ($html !== $shortcode && !empty($html)) {
+          return $html;
+        }
+      }
+
+      // どのショートコードも動作しない場合、デフォルトのいいねボタンを返す
+      return '<!-- Simple Like Page Plugin not found or no shortcode available -->';
+    },
+    'schema' => ['type' => 'string'],
+  ]);
+
   // コメント投稿
   register_rest_route('readdy/v1', '/posts/(?P<id>\d+)/comments', [
     'methods' => 'POST',

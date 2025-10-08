@@ -151,16 +151,14 @@ export default function SinglePost() {
               dangerouslySetInnerHTML={{ __html: post.content.rendered }}
             />
 
-            {/* Like Button (Simple Like Plugin) */}
+            {/* Like Button (Simple Like Page Plugin) */}
             <div className="flex items-center justify-center py-6 border-y border-purple-100">
-              {/*
-                Simple Like Pluginがインストールされている場合、
-                プラグインが自動的にいいねボタンを表示します。
-                または、single.phpテンプレートでショートコード [jmliker] を使用してください。
-              */}
-              <div id="simple-likes-wrapper" className="simple-likes-wrapper" data-post-id={post.id}>
-                {/* プラグインがここにいいねボタンを挿入します */}
-              </div>
+              {post.like_button_html && (
+                <div
+                  className="simple-likes-wrapper"
+                  dangerouslySetInnerHTML={{ __html: post.like_button_html }}
+                />
+              )}
             </div>
 
             {/* Comments Section */}
