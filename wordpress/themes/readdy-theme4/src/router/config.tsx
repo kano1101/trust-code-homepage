@@ -11,6 +11,7 @@ import Contact from "../pages/contact/page";
 import Privacy from "../pages/privacy/page";
 import Terms from "../pages/terms/page";
 import RSS from "../pages/rss/page";
+import FAQ from "../pages/faq/page";
 import SinglePost from "../pages/single/page";
 
 const routes: RouteObject[] = [
@@ -46,6 +47,10 @@ const routes: RouteObject[] = [
   {
     path: "/rss",
     element: <Layout><RSS /></Layout>,
+  },
+  {
+    path: "/faq",
+    element: <Layout><FAQ /></Layout>,
   },
   // カテゴリアーカイブ（IDベース）
   {

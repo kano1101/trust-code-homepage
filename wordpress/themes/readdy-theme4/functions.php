@@ -85,13 +85,19 @@ function rtheme_get_parsedown() {
   static $parser = null;
   if ($parser) return $parser;
 
-  require_once get_template_directory() . '/inc/Parsedown.php';
-  $extra = get_template_directory() . '/inc/ParsedownExtra.php';
-  if (file_exists($extra)) {
-    require_once $extra;
-    $parser = new ParsedownExtra();
+  $custom = get_template_directory() . '/inc/CustomParsedown.php';
+  if (file_exists($custom)) {
+    require_once $custom;
+    $parser = new CustomParsedown();
   } else {
-    $parser = new Parsedown();
+    require_once get_template_directory() . '/inc/Parsedown.php';
+    $extra = get_template_directory() . '/inc/ParsedownExtra.php';
+    if (file_exists($extra)) {
+      require_once $extra;
+      $parser = new ParsedownExtra();
+    } else {
+      $parser = new Parsedown();
+    }
   }
   $parser->setSafeMode(true);
   return $parser;
@@ -162,7 +168,7 @@ add_action('rest_api_init', function () {
   // いいね機能のAPIエンドポイント
   $like_args = [
     'permission_callback' => '__return_true',
-    'args' => ['id' => ['validate_callback' => 'is_numeric']],
+    'args' => ['id' => ['validate_callback' => function($param) { return is_numeric($param); }]],
   ];
 
   register_rest_route('readdy/v1', '/posts/(?P<id>\d+)/like',
@@ -177,9 +183,9 @@ add_action('rest_api_init', function () {
     'callback' => 'readdy_submit_comment',
     'permission_callback' => '__return_true',
     'args' => [
-      'id' => ['required' => true, 'validate_callback' => 'is_numeric'],
+      'id' => ['required' => true, 'validate_callback' => function($param) { return is_numeric($param); }],
       'author_name' => ['required' => true, 'sanitize_callback' => 'sanitize_text_field'],
-      'author_email' => ['required' => true, 'sanitize_callback' => 'sanitize_email', 'validate_callback' => 'is_email'],
+      'author_email' => ['required' => true, 'sanitize_callback' => 'sanitize_email', 'validate_callback' => function($param) { return is_email($param); }],
       'content' => ['required' => true, 'sanitize_callback' => 'sanitize_textarea_field'],
     ],
   ]);
@@ -191,7 +197,7 @@ add_action('rest_api_init', function () {
     'permission_callback' => '__return_true',
     'args' => [
       'name' => ['required' => true, 'sanitize_callback' => 'sanitize_text_field'],
-      'email' => ['required' => true, 'sanitize_callback' => 'sanitize_email', 'validate_callback' => 'is_email'],
+      'email' => ['required' => true, 'sanitize_callback' => 'sanitize_email', 'validate_callback' => function($param) { return is_email($param); }],
       'subject' => ['required' => true, 'sanitize_callback' => 'sanitize_text_field'],
       'message' => ['required' => true, 'sanitize_callback' => 'sanitize_textarea_field'],
     ],

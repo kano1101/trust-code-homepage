@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { siteConfig } from '../config/siteConfig';
 
 export interface WordPressConfig {
   siteName: string;
@@ -8,6 +9,7 @@ export interface WordPressConfig {
   author: {
     name: string;
     bio: string;
+    birthdate: string;
     description: string;
     avatar: string;
   };
@@ -52,28 +54,21 @@ const fetchWordPressConfig = async (): Promise<WordPressConfig> => {
       ]);
 
       return {
-        siteName: siteInfo.title || 'TrustCode',
-        tagline: siteInfo.description || 'ともに信頼あるコードを築こう',
-        description: siteInfo.site_description || 'ケーキ屋のエンジニアAqunが綴る、自己啓発とテクノロジーの融合',
+        siteName: siteInfo.title || siteConfig.siteName,
+        tagline: siteInfo.description || siteConfig.tagline,
+        description: siteInfo.site_description || siteConfig.description,
         author: {
-          name: siteInfo.author_name || 'Aqun',
-          bio: siteInfo.author_bio || 'ケーキ屋の社内エンジニア\\n1989年11月1日生',
-          description: siteInfo.author_description || 'プログラマ、花屋、医療従事者を経て現在のケーキ屋社内エンジニアとして活動。自己啓発とテクノロジーの融合を追求。',
-          avatar: siteInfo.author_avatar || 'A'
+          name: siteInfo.author_name || siteConfig.author.name,
+          bio: siteInfo.author_bio || siteConfig.author.bio,
+          birthdate: siteInfo.author_birthdate || siteConfig.author.birthdate,
+          description: siteInfo.author_description || siteConfig.author.description,
+          avatar: siteInfo.author_avatar || siteConfig.author.avatar
         },
         navigation: menus.length > 0 ? menus.map((item: any) => ({
           name: item.title,
           href: item.url,
           active: item.current || false
-        })) : [
-          { name: 'ホーム', href: '#', active: true },
-          { name: '自己啓発', href: '#' },
-          { name: 'アクアリウム', href: '#' },
-          { name: 'ガジェット', href: '#' },
-          { name: 'プログラミング', href: '#' },
-          { name: 'AI・IT', href: '#' },
-          { name: 'About', href: '#' }
-        ],
+        })) : siteConfig.navigation,
         categories: categories.map((cat: any) => ({
           name: cat.name,
           count: cat.count,
@@ -83,95 +78,23 @@ const fetchWordPressConfig = async (): Promise<WordPressConfig> => {
         })),
         tags: tags.map((tag: any) => tag.name),
         theme: {
-          primary: siteInfo.theme_primary || 'purple',
-          accent: siteInfo.theme_accent || 'yellow',
+          primary: siteInfo.theme_primary || siteConfig.theme.primary,
+          accent: siteInfo.theme_accent || siteConfig.theme.accent,
           gradients: {
-            hero: siteInfo.theme_hero_gradient || 'from-purple-900/60 to-purple-600/40',
-            card: siteInfo.theme_card_gradient || 'from-purple-600 to-purple-800',
-            button: siteInfo.theme_button_gradient || 'from-purple-600 to-purple-700'
+            hero: siteInfo.theme_hero_gradient || siteConfig.theme.gradients.hero,
+            card: siteInfo.theme_card_gradient || siteConfig.theme.gradients.card,
+            button: siteInfo.theme_button_gradient || siteConfig.theme.gradients.button
           }
         }
       };
     } else {
       // 開発環境用のフォールバック設定
-      return {
-        siteName: 'TrustCode',
-        tagline: 'ともに信頼あるコードを築こう',
-        description: 'ケーキ屋のエンジニアAqunが綴る、自己啓発とテクノロジーの融合',
-        author: {
-          name: 'Aqun',
-          bio: 'ケーキ屋の社内エンジニア\\n1989年11月1日生',
-          description: 'プログラマ、花屋、医療従事者を経て現在のケーキ屋社内エンジニアとして活動。自己啓発とテクノロジーの融合を追求。',
-          avatar: 'A'
-        },
-        navigation: [
-          { name: 'ホーム', href: '#', active: true },
-          { name: '自己啓発', href: '#' },
-          { name: 'アクアリウム', href: '#' },
-          { name: 'ガジェット', href: '#' },
-          { name: 'プログラミング', href: '#' },
-          { name: 'AI・IT', href: '#' },
-          { name: 'About', href: '#' }
-        ],
-        categories: [
-          { name: '自己啓発', count: 1, icon: 'ri-lightbulb-line', color: 'text-yellow-600', slug: 'self-development' },
-          { name: 'アクアリウム', count: 0, icon: 'ri-water-percent-line', color: 'text-blue-600', slug: 'aquarium' },
-          { name: 'ガジェット', count: 0, icon: 'ri-smartphone-line', color: 'text-green-600', slug: 'gadget' },
-          { name: 'プログラミング', count: 0, icon: 'ri-code-line', color: 'text-purple-600', slug: 'programming' },
-          { name: 'AI・IT', count: 0, icon: 'ri-robot-line', color: 'text-red-600', slug: 'ai-it' }
-        ],
-        tags: ['エンジニア', 'ライフスタイル', '自己効力感', 'ケーキ屋', 'プログラマ', '美学', 'ゴールデンルール', 'メモアプリ', 'Why', '活動'],
-        theme: {
-          primary: 'purple',
-          accent: 'yellow',
-          gradients: {
-            hero: 'from-purple-900/60 to-purple-600/40',
-            card: 'from-purple-600 to-purple-800',
-            button: 'from-purple-600 to-purple-700'
-          }
-        }
-      };
+      return siteConfig;
     }
   } catch (error) {
     console.error('WordPress設定の取得に失敗しました:', error);
     // エラー時のフォールバック設定
-    return {
-      siteName: 'TrustCode',
-      tagline: 'ともに信頼あるコードを築こう',
-      description: 'ケーキ屋のエンジニアAqunが綴る、自己啓発とテクノロジーの融合',
-      author: {
-        name: 'Aqun',
-        bio: 'ケーキ屋の社内エンジニア\\n1989年11月1日生',
-        description: 'プログラマ、花屋、医療従事者を経て現在のケーキ屋社内エンジニアとして活動。自己啓発とテクノロジーの融合を追求。',
-        avatar: 'A'
-      },
-      navigation: [
-        { name: 'ホーム', href: '#', active: true },
-        { name: '自己啓発', href: '#' },
-        { name: 'アクアリウム', href: '#' },
-        { name: 'ガジェット', href: '#' },
-        { name: 'プログラミング', href: '#' },
-        { name: 'AI・IT', href: '#' },
-        { name: 'About', href: '#' }
-      ],
-      categories: [
-        { name: '自己啓発', count: 1, icon: 'ri-lightbulb-line', color: 'text-yellow-600', slug: 'self-development' },
-        { name: 'アクアリウム', count: 0, icon: 'ri-water-percent-line', color: 'text-blue-600', slug: 'aquarium' },
-        { name: 'ガジェット', count: 0, icon: 'ri-smartphone-line', color: 'text-green-600', slug: 'gadget' },
-        { name: 'プログラミング', count: 0, icon: 'ri-code-line', color: 'text-purple-600', slug: 'programming' },
-        { name: 'AI・IT', count: 0, icon: 'ri-robot-line', color: 'text-red-600', slug: 'ai-it' }
-      ],
-      tags: ['エンジニア', 'ライフスタイル', '自己効力感', 'ケーキ屋', 'プログラマ', '美学', 'ゴールデンルール', 'メモアプリ', 'Why', '活動'],
-      theme: {
-        primary: 'purple',
-        accent: 'yellow',
-        gradients: {
-          hero: 'from-purple-900/60 to-purple-600/40',
-          card: 'from-purple-600 to-purple-800',
-          button: 'from-purple-600 to-purple-700'
-        }
-      }
-    };
+    return siteConfig;
   }
 };
 

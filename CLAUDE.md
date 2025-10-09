@@ -544,3 +544,100 @@ homepage/
 
 **確認済み**:
 - BlogCardの抜粋は既に「...」表示（「[...]」ではない）
+
+---
+
+## 本番環境へのデプロイ（NAS）
+
+### Docker Composeのvolume機能を利用したデプロイ
+
+#### 仕組み
+
+**docker-compose.production.yml**（71行目）:
+```yaml
+volumes:
+  - ./wordpress/themes:/var/www/html/wp-content/themes
+```
+
+この設定により、NASホスト上の`./wordpress/themes`ディレクトリがWordPressコンテナ内の`/var/www/html/wp-content/themes`に自動マウントされます。
+
+**メリット**:
+- rsync不要（SynologyNASで動作が不安定）
+- ホスト側のファイル変更が即座にコンテナ内に反映
+- シンプルなscpコマンドで十分
+
+#### デプロイフロー
+
+```bash
+# 1. ローカルでビルド
+cd /Users/akirakano/IdeaProjects/homepage/wordpress/themes/readdy-theme4
+npm run build
+npm run copy:assets
+
+# 2. NASへ必要なファイルをコピー（scpを使用）
+scp -r assets/ manifest.json functions.php inc/ style.css \
+  root@AkiraSynology:/volume1/docker/trust-code/wordpress/themes/readdy-theme4/
+
+# 3. NASでキャッシュとリライトルールをフラッシュ
+ssh root@AkiraSynology "cd /volume1/docker/trust-code && \
+  docker-compose -f docker-compose.production.yml --env-file .env.production exec -T wordpress wp cache flush --allow-root && \
+  docker-compose -f docker-compose.production.yml --env-file .env.production exec -T wordpress wp rewrite flush --allow-root"
+```
+
+#### ディレクトリ構造
+
+**開発環境（ローカル）**:
+```
+/Users/akirakano/IdeaProjects/homepage/
+├── docker-compose.yml
+├── docker-compose.production.yml
+└── wordpress/
+    └── themes/
+        └── readdy-theme4/
+            ├── assets/         ← ビルド済みJS/CSS
+            ├── manifest.json   ← ビルド済みマニフェスト
+            ├── functions.php
+            ├── inc/            ← Parsedown等
+            └── style.css
+```
+
+**本番環境（NAS）**:
+```
+/volume1/docker/trust-code/
+├── docker-compose.production.yml
+├── .env.production
+└── wordpress/
+    └── themes/
+        └── readdy-theme4/  ← ここにscpでコピー
+```
+
+#### 除外すべきファイル（デプロイ不要）
+
+本番環境には以下のファイルは不要：
+- `node_modules/` - 開発依存
+- `src/` - TypeScript/Reactソース
+- `out/` - Viteビルド一時ファイル
+- `.git/` - Git履歴
+- `*.sh` - ビルドスクリプト
+- `package.json`, `package-lock.json` - npm設定
+- `vite.config.ts`, `tsconfig.json` - ビルド設定
+- `tailwind.config.ts`, `postcss.config.ts` - CSS設定
+
+#### コピーすべきファイル
+
+本番環境に必要なファイル：
+- `assets/*.js` - ビルド済みJavaScript
+- `assets/*.css` - ビルド済みCSS
+- `manifest.json` - アセットマニフェスト
+- `functions.php` - テーマ機能
+- `inc/` - PHPライブラリ（Parsedown等）
+- `style.css` - WordPressテーマ識別用
+- `screenshot.png` - テーマサムネイル（あれば）
+
+#### 検証結果
+
+✅ **問題なし**: volume機能により、rsyncは不要で単純なscpで十分に動作します。
+
+---
+
+**最終更新**: 2025-10-08

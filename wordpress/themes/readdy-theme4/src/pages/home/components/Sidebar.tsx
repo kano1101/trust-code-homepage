@@ -1,17 +1,14 @@
 import { useWordPressCategories } from '../../../hooks/useWordPressCategories';
 import { useWordPressConfig } from '../../../hooks/useWordPressConfig';
 import { useWordPressTags } from '../../../hooks/useWordPressTags';
+import { siteConfig } from '../../../config/siteConfig';
 
 export default function Sidebar() {
   const { categories } = useWordPressCategories();
   const { config } = useWordPressConfig();
   const { tags } = useWordPressTags();
 
-  const author = config?.author || {
-    name: 'Aqun',
-    avatar: 'A',
-    bio: 'ケーキ屋の社内エンジニア\n1989年11月1日生',
-  };
+  const author = config?.author || siteConfig.author;
 
   return (
     <aside className="space-y-6">
@@ -19,17 +16,23 @@ export default function Sidebar() {
       <div className="bg-white rounded-2xl shadow-lg border border-purple-100 p-6">
         <div className="text-center">
           <div className="w-20 h-20 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-2xl">A</span>
+            <span className="text-white font-bold text-2xl">{author.avatar}</span>
           </div>
-          <h3 className="text-xl font-bold text-purple-800 mb-2">Aqun</h3>
+          <h3 className="text-xl font-bold text-purple-800 mb-2">{author.name}</h3>
           <p className="text-gray-600 text-sm mb-4">
-            ケーキ屋の社内エンジニア<br />
-            1989年11月1日生
+            {author.bio}
+            {author.birthdate && (
+              <>
+                <br />
+                {author.birthdate}
+              </>
+            )}
           </p>
-          <p className="text-gray-700 text-sm leading-relaxed">
-            プログラマ、花屋、医療従事者を経て現在のケーキ屋社内エンジニアとして活動。
-            自己啓発とテクノロジーの融合を追求。
-          </p>
+          {author.description && (
+            <p className="text-gray-700 text-sm leading-relaxed">
+              {author.description}
+            </p>
+          )}
         </div>
       </div>
 

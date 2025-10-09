@@ -1,18 +1,13 @@
 import { useWordPressConfig } from '../../hooks/useWordPressConfig';
 import { useWordPressCategories } from '../../hooks/useWordPressCategories';
 import PageHero from '../../components/PageHero';
+import { siteConfig } from '../../config/siteConfig';
 
 export default function AboutPage() {
   const { config } = useWordPressConfig();
   const { categories } = useWordPressCategories();
 
-  const author = config?.author || {
-    name: 'Aqun',
-    bio: 'ケーキ屋の社内エンジニア',
-    birthdate: '1989年11月1日生まれ',
-    description: 'プログラマ、花屋、医療従事者を経て現在のケーキ屋社内エンジニアとして活動。自己啓発とテクノロジーの融合を追求。',
-    avatar: 'A'
-  };
+  const author = config?.author || siteConfig.author;
 
   // カテゴリ名から対応するカテゴリIDを検索
   const findCategoryByName = (name: string) => {

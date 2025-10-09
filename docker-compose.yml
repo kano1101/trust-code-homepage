@@ -44,8 +44,8 @@ services:
       WORDPRESS_DB_NAME: ${MYSQL_DATABASE:-wordpress_db}
       WORDPRESS_DB_USER: ${MYSQL_USER:-wp_user}
       WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
-      WP_HOME: ${WP_HOME:-https://trust-code.net}
-      WP_SITEURL: ${WP_SITEURL:-https://trust-code.net}
+      WP_HOME: ${WP_HOME:-http://localhost:8080}
+      WP_SITEURL: ${WP_SITEURL:-http://localhost:8080}
       WORDPRESS_CONFIG_EXTRA: |
         define('WP_MEMORY_LIMIT','256M');
         define('WP_DEBUG', true);
@@ -100,11 +100,4 @@ services:
     expose:
       - "80"
     restart: always
-    networks: [web]
-
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: wp-cloudflared
-    command: tunnel --no-autoupdate run --token ${CF_TUNNEL_TOKEN}
-    restart: unless-stopped
     networks: [web]
