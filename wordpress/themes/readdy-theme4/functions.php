@@ -22,6 +22,21 @@ function readdy_theme_setup() {
 }
 add_action('after_setup_theme', 'readdy_theme_setup');
 
+/* ========== サイトURLの強制設定（本番環境対応） ========== */
+function readdy_force_site_url() {
+  $wp_home = getenv('WP_HOME');
+  $wp_siteurl = getenv('WP_SITEURL');
+
+  if ($wp_home && $wp_home !== get_option('home')) {
+    update_option('home', $wp_home);
+  }
+
+  if ($wp_siteurl && $wp_siteurl !== get_option('siteurl')) {
+    update_option('siteurl', $wp_siteurl);
+  }
+}
+add_action('init', 'readdy_force_site_url');
+
 /* ========== Excerpt（抜粋）のカスタマイズ ========== */
 // [...]を...に変更
 add_filter('excerpt_more', function($more) {

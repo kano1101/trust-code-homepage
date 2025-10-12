@@ -1,16 +1,12 @@
 # NAS本番環境用の設定
-# 使用方法: docker-compose -f docker-compose.production.yml --env-file .env.production up -d
+# 使用方法: dockercompose -f docker-compose.yml -f docker-compose.production.yml --env-file .env.production up -d
 
 networks:
   web:
 
 volumes:
   db_data:
-    external: true
-    name: trust-code_db_data
   wp_html:
-    external: true
-    name: trust-code_wp_html
 
 services:
   db:
@@ -18,8 +14,11 @@ services:
       - db_data:/var/lib/mysql
 
   wordpress:
-    build: null
-    pull_policy: always
+    image: akirakano/trust-code-wordpress:latest
+    # 本番環境ではCloudflare Tunnelを使うのでポート公開不要
+    # ポート公開が必要な場合は .env.production に APP_PORT=8080 を設定
+    expose:
+      - "80"
     environment:
       WP_HOME: ${WP_HOME:-https://trust-code.net}
       WP_SITEURL: ${WP_SITEURL:-https://trust-code.net}
@@ -27,8 +26,11 @@ services:
       - wp_html:/var/www/html
 
   nginx:
+    ports: []  # Cloudflare Tunnel使用のためポート公開不要
     expose:
       - "80"
+    volumes:
+      - ./nginx/conf.d/production.conf:/etc/nginx/conf.d/default.conf:ro
 
   cloudflared:
     image: cloudflare/cloudflared:latest
