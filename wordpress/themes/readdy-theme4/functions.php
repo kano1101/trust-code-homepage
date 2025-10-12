@@ -64,6 +64,12 @@ function readdy_force_site_url() {
   if ($wp_siteurl && $wp_siteurl !== get_option('siteurl')) {
     update_option('siteurl', $wp_siteurl);
   }
+
+  // HTTPS環境ではサーバーポートを443に強制（:8080等の誤ったポート番号を防ぐ）
+  if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+    $_SERVER['SERVER_PORT'] = 443;
+    $_SERVER['HTTPS'] = 'on';
+  }
 }
 add_action('init', 'readdy_force_site_url');
 
