@@ -141,7 +141,7 @@ fi
 echo "Docker イメージを再ビルド中..."
 docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file "$NAS_COMPOSE_DIR/.env.production" down
 docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file "$NAS_COMPOSE_DIR/.env.production" build --no-cache wordpress
-docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file "$NAS_COMPOSE_DIR/.env.production" up -d
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file "$NAS_COMPOSE_DIR/.env.production" up -d --missing=pull
 
 echo "NAS docker compose デプロイ完了"
 ROOTEOF
