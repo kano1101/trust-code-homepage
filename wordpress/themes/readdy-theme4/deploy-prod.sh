@@ -137,37 +137,11 @@ if [ ! -f "$NAS_COMPOSE_DIR/.env.production" ]; then
   exit 1
 fi
 
-# Dockerfile と init-wordpress.sh のハッシュを計算
-DOCKERFILE_HASH=\$(cat "\$NAS_COMPOSE_DIR/wordpress/Dockerfile" "\$NAS_COMPOSE_DIR/wordpress/init-wordpress.sh" | sha1sum | awk '{print \$1}')
-PREVIOUS_DOCKERFILE_HASH=\$(cat .dockerfile_hash 2>/dev/null || echo "")
-
-# 構成変更検出
-CURRENT_HASH=\$(docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file \$NAS_COMPOSE_DIR/.env.production config | sha1sum)
-PREVIOUS_HASH=\$(cat .compose_config_hash 2>/dev/null || echo "")
-
-if [ -z "\$(docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file \$NAS_COMPOSE_DIR/.env.production ps -q)" ]; then
-  echo "コンテナが起動していません：初回起動を実行します"
-  echo "Docker イメージをビルド中..."
-  docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file \$NAS_COMPOSE_DIR/.env.production build --no-cache wordpress
-  docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file \$NAS_COMPOSE_DIR/.env.production up -d --pull=missing
-  echo "\$CURRENT_HASH" > .compose_config_hash
-  echo "\$DOCKERFILE_HASH" > .dockerfile_hash
-elif [ "\$DOCKERFILE_HASH" != "\$PREVIOUS_DOCKERFILE_HASH" ]; then
-  echo "Dockerfile または init-wordpress.sh の変更を検出：イメージを再ビルドします"
-  docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file \$NAS_COMPOSE_DIR/.env.production down
-  docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file \$NAS_COMPOSE_DIR/.env.production build --no-cache wordpress
-  docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file \$NAS_COMPOSE_DIR/.env.production up -d
-  echo "\$CURRENT_HASH" > .compose_config_hash
-  echo "\$DOCKERFILE_HASH" > .dockerfile_hash
-elif [ "\$CURRENT_HASH" != "\$PREVIOUS_HASH" ]; then
-  echo "構成変更を検出：変更があったコンテナのみ再作成します"
-  docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file \$NAS_COMPOSE_DIR/.env.production up -d --pull=missing
-  echo "\$CURRENT_HASH" > .compose_config_hash
-else
-  echo "構成変更なし：wordpress と nginx のみ再起動します"
-  # テーマ変更を反映（wordpress）、nginx設定変更を反映（nginx）
-  docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file \$NAS_COMPOSE_DIR/.env.production restart wordpress nginx
-fi
+# Dockerfile が変更されている場合は強制的に再ビルド
+echo "Docker イメージを再ビルド中..."
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file "$NAS_COMPOSE_DIR/.env.production" down
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file "$NAS_COMPOSE_DIR/.env.production" build --no-cache wordpress
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file "$NAS_COMPOSE_DIR/.env.production" up -d
 
 echo "NAS docker compose デプロイ完了"
 ROOTEOF
