@@ -53,25 +53,17 @@ function readdy_spa_template_redirect() {
 add_action('template_redirect', 'readdy_spa_template_redirect');
 
 /* ========== サイトURLの強制設定（本番環境対応） ========== */
-function readdy_force_site_url() {
-  $wp_home = getenv('WP_HOME');
-  $wp_siteurl = getenv('WP_SITEURL');
-
-  if ($wp_home && $wp_home !== get_option('home')) {
-    update_option('home', $wp_home);
-  }
-
-  if ($wp_siteurl && $wp_siteurl !== get_option('siteurl')) {
-    update_option('siteurl', $wp_siteurl);
-  }
-
+// 注: WP_HOME と WP_SITEURL は wp-config.php で設定済み（init-wordpress.sh により自動生成）
+// ここでは $_SERVER 変数の調整のみを行う
+function readdy_fix_server_vars() {
   // HTTPS環境ではサーバーポートを443に強制（:8080等の誤ったポート番号を防ぐ）
   if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
     $_SERVER['SERVER_PORT'] = 443;
     $_SERVER['HTTPS'] = 'on';
   }
 }
-add_action('init', 'readdy_force_site_url');
+// より早いタイミングで実行（WordPress が URL を生成する前）
+add_action('muplugins_loaded', 'readdy_fix_server_vars');
 
 /* ========== Excerpt（抜粋）のカスタマイズ ========== */
 // [...]を...に変更

@@ -3,6 +3,14 @@ FROM wordpress:latest
 # mod_rewriteを有効化（React Routerのルーティングに必要）
 RUN a2enmod rewrite
 
+# .htaccess を有効化（AllowOverride All）
+RUN echo '<Directory /var/www/html>\n\
+  Options Indexes FollowSymLinks\n\
+  AllowOverride All\n\
+  Require all granted\n\
+</Directory>' > /etc/apache2/conf-available/wordpress.conf \
+  && a2enconf wordpress
+
 # wp-cliをインストール
 RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && \
     chmod +x wp-cli.phar && \
