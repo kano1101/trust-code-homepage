@@ -1,5 +1,8 @@
 FROM wordpress:latest
 
+# mod_rewriteを有効化（React Routerのルーティングに必要）
+RUN a2enmod rewrite
+
 # wp-cliをインストール
 RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && \
     chmod +x wp-cli.phar && \

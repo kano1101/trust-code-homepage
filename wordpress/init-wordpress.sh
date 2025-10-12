@@ -19,6 +19,13 @@ if command -v wp &> /dev/null; then
   wp option update home "$WP_HOME_URL" --allow-root --path=/var/www/html || echo "Failed to update home URL"
   wp option update siteurl "$WP_SITEURL_URL" --allow-root --path=/var/www/html || echo "Failed to update siteurl URL"
   echo "WordPress URLs updated to: $WP_HOME_URL"
+
+  echo "Setting up permalink structure for React Router..."
+  # パーマリンク構造を設定（React Routerのルーティングに必要）
+  wp rewrite structure '/%postname%/' --allow-root --path=/var/www/html || echo "Failed to set permalink structure"
+  # .htaccess を強制生成
+  wp rewrite flush --hard --allow-root --path=/var/www/html || echo "Failed to flush rewrite rules"
+  echo "Permalink structure configured"
 else
   echo "wp-cli not found, skipping database URL update"
 fi

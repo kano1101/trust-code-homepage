@@ -640,4 +640,106 @@ ssh root@AkiraSynology "cd /volume1/docker/trust-code && \
 
 ---
 
-**最終更新**: 2025-10-08
+## 実装詳細: いいね機能
+
+### 概要
+WordPress REST APIを使用したカスタムいいね機能の実装。Cookie認証により、ユーザーごとのいいね状態を30日間保持。
+
+### REST API 500エラーの修正
+
+**問題**: いいねボタンをクリックすると500エラー、`is_numeric() expects exactly 1 argument, 3 given`
+
+**原因**: WordPress REST APIの`validate_callback`は3つの引数を受け取るが、`is_numeric`は1つの引数しか受け取らない
+
+**解決策**: 無名関数でラップ
+```php
+'args' => ['id' => ['validate_callback' => function($param) { return is_numeric($param); }]],
+```
+
+**適用箇所**: functions.php のいいね、コメント、お問い合わせエンドポイント
+
+---
+
+## Single Source of Truth (SSOT) アーキテクチャ
+
+### 問題
+`bio`と`birthdate`などの情報が複数の場所にハードコードされ、情報サイロ化していた。
+
+### 解決策
+`src/config/siteConfig.ts`を単一の情報源として、全てのコンポーネントとフックがそこから値を取得。
+
+**データフロー**:
+```
+WordPress DB (最優先)
+  ↓ REST API
+useWordPressConfig (フォールバック: siteConfig)
+  ↓
+各コンポーネント (フォールバック: siteConfig)
+```
+
+---
+
+## React SPA ルーティング問題と解決
+
+### 問題
+- トップページ (`/`) は正常に表示
+- `/about`, `/post/123` などにアクセスすると NOT FOUND
+- WordPress が存在しないページとして 404 を返す
+
+### 原因
+React Router はクライアントサイドでのみ動作。サーバーサイドで全てのリクエストを index.php にリダイレクトする必要がある。
+
+### 解決策
+
+**1. functions.php でテンプレートリダイレクト**:
+```php
+function readdy_spa_template_redirect() {
+  // REST API, 管理画面, 静的ファイルは除外
+  if (strpos($_SERVER['REQUEST_URI'], '/wp-json/') !== false ||
+      is_admin() ||
+      strpos($_SERVER['REQUEST_URI'], '/wp-admin') !== false ||
+      strpos($_SERVER['REQUEST_URI'], '/wp-login') !== false ||
+      preg_match('/\.(css|js|png|jpg|jpeg|gif|svg|webp|ico|woff|woff2|ttf|otf)$/', $_SERVER['REQUEST_URI'])) {
+    return;
+  }
+  // 全てのページでindex.phpを使用
+  include get_template_directory() . '/index.php';
+  exit;
+}
+add_action('template_redirect', 'readdy_spa_template_redirect');
+```
+
+**2. Dockerfile で mod_rewrite 有効化**:
+```dockerfile
+RUN a2enmod rewrite
+```
+
+**3. init-wordpress.sh でパーマリンク設定**:
+```bash
+wp rewrite structure '/%postname%/' --allow-root --path=/var/www/html
+wp rewrite flush --hard --allow-root --path=/var/www/html
+```
+
+### データフロー
+```
+ブラウザ → Cloudflare Tunnel → Nginx → Apache/WordPress
+  → functions.php (template_redirect)
+  → index.php (<div id="root"></div>)
+  → React Router が /about をハンドル
+```
+
+---
+
+## Cloudflare 設定
+
+### 必須設定
+- **SSL/TLS 暗号化モード**: フル（完全）推奨
+- **「常にHTTPSを使用」**: ON
+  - これにより `:8080` リダイレクト問題が解決
+
+### トンネルトークン
+- `.env.production` の `CF_TUNNEL_TOKEN` に保存
+
+---
+
+**最終更新**: 2025-10-12

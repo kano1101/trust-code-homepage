@@ -22,6 +22,36 @@ function readdy_theme_setup() {
 }
 add_action('after_setup_theme', 'readdy_theme_setup');
 
+/* ========== React SPA ルーティング対応 ========== */
+// 全てのリクエストでReactアプリを読み込む（REST API、管理画面、wp-json以外）
+function readdy_spa_template_redirect() {
+  // REST APIリクエストは除外
+  if (strpos($_SERVER['REQUEST_URI'], '/wp-json/') !== false) {
+    return;
+  }
+  // 管理画面は除外
+  if (is_admin()) {
+    return;
+  }
+  // wp-adminは除外
+  if (strpos($_SERVER['REQUEST_URI'], '/wp-admin') !== false) {
+    return;
+  }
+  // wp-loginは除外
+  if (strpos($_SERVER['REQUEST_URI'], '/wp-login') !== false) {
+    return;
+  }
+  // 静的ファイルは除外（.css, .js, .png等）
+  if (preg_match('/\.(css|js|png|jpg|jpeg|gif|svg|webp|ico|woff|woff2|ttf|otf)$/', $_SERVER['REQUEST_URI'])) {
+    return;
+  }
+
+  // 全てのページでindex.phpテンプレートを使用（Reactアプリを起動）
+  include get_template_directory() . '/index.php';
+  exit;
+}
+add_action('template_redirect', 'readdy_spa_template_redirect');
+
 /* ========== サイトURLの強制設定（本番環境対応） ========== */
 function readdy_force_site_url() {
   $wp_home = getenv('WP_HOME');
