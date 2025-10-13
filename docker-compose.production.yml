@@ -14,14 +14,42 @@ services:
       - db_data:/var/lib/mysql
 
   wordpress:
-    image: akirakano/trust-code-wordpress:latest
+    image: akirakano1101/trust-code-wordpress:latest
     # 本番環境ではCloudflare Tunnelを使うのでポート公開不要
     # ポート公開が必要な場合は .env.production に APP_PORT=8080 を設定
     expose:
       - "80"
     environment:
-      WP_HOME: https://trust-code.net
-      WP_SITEURL: https://trust-code.net
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE:-wordpress_db}
+      WORDPRESS_DB_USER: ${MYSQL_USER:-wp_user}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
+      WP_HOME: ${WP_HOME}
+      WP_SITEURL: ${WP_SITEURL}
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_MEMORY_LIMIT','256M');
+        define('WP_DEBUG', false);
+        define('WP_DEBUG_LOG', false);
+        define('WP_DEBUG_DISPLAY', false);
+        define('FS_METHOD','direct');
+
+        // 本番環境のみFORCE_SSL_ADMINとHTTPS検知を有効化
+        $$wp_home = getenv('WP_HOME');
+        if ($$wp_home && strpos($$wp_home, 'https://') === 0) {
+          define('FORCE_SSL_ADMIN', true);
+
+          // Cloudflare / 逆プロキシ下でのHTTPS検知
+          if (!empty($$_SERVER['HTTP_CF_VISITOR'])) {
+            $$_cf = json_decode($$_SERVER['HTTP_CF_VISITOR'], true);
+            if (!empty($$_cf['scheme']) && $$_cf['scheme'] === 'https') { $$_SERVER['HTTPS'] = 'on'; }
+          }
+          if (!empty($$_SERVER['HTTP_X_FORWARDED_PROTO']) && $$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+            $$_SERVER['HTTPS'] = 'on';
+          }
+          if (!empty($$_SERVER['HTTP_X_FORWARDED_HOST'])) {
+            $$_SERVER['HTTP_HOST'] = $$_SERVER['HTTP_X_FORWARDED_HOST'];
+          }
+        }
     volumes:
       - wp_html:/var/www/html
       - ./wordpress/themes:/var/www/html/wp-content/themes

@@ -60,6 +60,11 @@ function readdy_fix_server_vars() {
   if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
     $_SERVER['SERVER_PORT'] = 443;
     $_SERVER['HTTPS'] = 'on';
+
+    // HTTP_HOST からポート番号を削除（:8080などを除去）
+    if (!empty($_SERVER['HTTP_HOST'])) {
+      $_SERVER['HTTP_HOST'] = preg_replace('/:\d+$/', '', $_SERVER['HTTP_HOST']);
+    }
   }
 }
 // より早いタイミングで実行（WordPress が URL を生成する前）

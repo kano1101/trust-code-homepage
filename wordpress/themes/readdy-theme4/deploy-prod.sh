@@ -33,7 +33,20 @@ npm run copy:assets
 cd - >/dev/null
 
 # === デプロイ処理 ===
-echo "▶ Step 6: NASへテーマとcomposeをデプロイ（ssh + tar）"
+echo "▶ Step 6: Dockerイメージの更新確認"
+echo "  ※ Dockerイメージ（Dockerfile, init-wordpress.sh等）を変更した場合のみYESを選択"
+echo "  ※ テーマのみの変更であればNOで構いません"
+read -r -p "Docker Hubから最新イメージをPULLしますか? (y/N): " pull_image
+PULL_IMAGE_FLAG=""
+if [[ $pull_image =~ ^[Yy]$ ]]; then
+  PULL_IMAGE_FLAG="--pull=always"
+  echo "  → 最新イメージをPULLします"
+else
+  PULL_IMAGE_FLAG="--pull=missing"
+  echo "  → ローカルにイメージがない場合のみPULLします"
+fi
+
+echo "▶ Step 7: NASへテーマとcomposeをデプロイ（ssh + tar）"
 echo "  デプロイ先: ${NAS_USER}@${NAS_HOST}:${NAS_THEME_PATH}"
 read -r -p "NASへのデプロイを実行しますか? (y/N): " yn
 [[ ! $yn =~ ^[Yy]$ ]] && echo "中止しました。" && exit 0
@@ -103,8 +116,7 @@ fi
 
 # (4) root環境で本番配置＆compose再起動
 echo "NAS上でroot権限で操作を実行します（パスワード入力が必要です）"
-ssh -t -p "$NAS_PORT" "$NAS_USER@$NAS_HOST" '
-  sudo -i bash << "ROOTEOF"
+ssh -t -p "$NAS_PORT" "$NAS_USER@$NAS_HOST" "PULL_IMAGE_FLAG='$PULL_IMAGE_FLAG' sudo -i bash << 'ROOTEOF'
 set -e
 
 # 変数設定
@@ -113,17 +125,24 @@ TMP_DIR="/tmp/readdy-theme4"
 NAS_COMPOSE_DIR="/volume1/docker/trust-code"
 
 # ファイル配置
+echo "ファイル配置を開始..."
 mkdir -p "$(dirname "$NAS_THEME_PATH")"
 rm -rf "$NAS_THEME_PATH"
-mv "$TMP_DIR/theme" "$NAS_THEME_PATH"
-mv "$TMP_DIR/cfg/.env.production" "$NAS_COMPOSE_DIR/"
-mv "$TMP_DIR/cfg/docker-compose.yml" "$NAS_COMPOSE_DIR/"
-mv "$TMP_DIR/cfg/docker-compose.production.yml" "$NAS_COMPOSE_DIR/"
-mv "$TMP_DIR/cfg/Dockerfile" "$NAS_COMPOSE_DIR/wordpress/"
-mv "$TMP_DIR/cfg/docker-entrypoint-wrapper.sh" "$NAS_COMPOSE_DIR/wordpress/"
-mv "$TMP_DIR/cfg/init-wordpress.sh" "$NAS_COMPOSE_DIR/wordpress/"
+mv "$TMP_DIR/theme" "$NAS_THEME_PATH" && echo "  ✓ テーマを配置: $NAS_THEME_PATH"
+
+# Composeディレクトリの確認・作成
+mkdir -p "$NAS_COMPOSE_DIR"
+mkdir -p "$NAS_COMPOSE_DIR/wordpress"
 mkdir -p "$NAS_COMPOSE_DIR/nginx/conf.d"
-mv "$TMP_DIR/cfg/production.conf" "$NAS_COMPOSE_DIR/nginx/conf.d/"
+
+mv "$TMP_DIR/cfg/.env.production" "$NAS_COMPOSE_DIR/" && echo "  ✓ .env.production を配置"
+mv "$TMP_DIR/cfg/docker-compose.yml" "$NAS_COMPOSE_DIR/" && echo "  ✓ docker-compose.yml を配置"
+mv "$TMP_DIR/cfg/docker-compose.production.yml" "$NAS_COMPOSE_DIR/" && echo "  ✓ docker-compose.production.yml を配置"
+mv "$TMP_DIR/cfg/Dockerfile" "$NAS_COMPOSE_DIR/wordpress/" && echo "  ✓ Dockerfile を配置"
+mv "$TMP_DIR/cfg/docker-entrypoint-wrapper.sh" "$NAS_COMPOSE_DIR/wordpress/" && echo "  ✓ docker-entrypoint-wrapper.sh を配置"
+mv "$TMP_DIR/cfg/init-wordpress.sh" "$NAS_COMPOSE_DIR/wordpress/" && echo "  ✓ init-wordpress.sh を配置"
+mv "$TMP_DIR/cfg/production.conf" "$NAS_COMPOSE_DIR/nginx/conf.d/" && echo "  ✓ production.conf を配置"
+
 echo "テーマ、compose、nginx設定を反映しました。"
 
 # Docker volume準備
@@ -137,13 +156,18 @@ if [ ! -f "$NAS_COMPOSE_DIR/.env.production" ]; then
   exit 1
 fi
 
-# Dockerfile が変更されている場合は強制的に再ビルド
-echo "Docker イメージを再ビルド中..."
-docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file "$NAS_COMPOSE_DIR/.env.production" down
-docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file "$NAS_COMPOSE_DIR/.env.production" build --no-cache wordpress
-docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file "$NAS_COMPOSE_DIR/.env.production" up -d --missing=pull
+echo "環境変数ファイルが正常に配置されました: $NAS_COMPOSE_DIR/.env.production"
+
+# コンテナの状態確認と起動/再起動
+if [ -z "$(docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file $NAS_COMPOSE_DIR/.env.production ps -q 2>/dev/null)" ]; then
+  echo "コンテナが起動していません：初回起動を実行します"
+  docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file $NAS_COMPOSE_DIR/.env.production up -d $PULL_IMAGE_FLAG
+else
+  echo "wordpress と nginx を再起動します"
+  docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file $NAS_COMPOSE_DIR/.env.production restart wordpress nginx
+fi
 
 echo "NAS docker compose デプロイ完了"
 ROOTEOF
-'
+"
 echo "✅ デプロイ完了：$NAS_THEME_PATH"

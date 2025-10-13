@@ -17,7 +17,11 @@
 - **プラットフォーム**: Mac（ローカルDocker）
 - **URL**: http://localhost:8080
 - **Docker Compose**: `docker-compose.yml`
-- **環境変数**: `.env` または `.env.local`
+- **環境変数**: `.env.local` (推奨) または `.env`
+- **環境変数の設定**:
+  - `WP_HOME`: `http://localhost:8080`
+  - `WP_SITEURL`: `http://localhost:8080`
+  - データベース認証情報（MYSQL_*）
 
 ### 本番環境
 - **プラットフォーム**: 自宅NAS（AkiraSynology）
@@ -25,6 +29,19 @@
 - **Docker Compose**: `docker-compose.production.yml`
 - **環境変数**: `.env.production`
 - **NASパス**: `/volume1/docker/trust-code/`
+- **運用方針**: Docker Hub からイメージをPULLして使用（NASではビルドしない）
+- **環境変数の設定**:
+  - `WP_HOME`: `https://trust-code.net`
+  - `WP_SITEURL`: `https://trust-code.net`
+  - データベース認証情報（MYSQL_*）
+  - Cloudflare Tunnel トークン（CF_TUNNEL_TOKEN）
+
+### 環境変数テンプレート
+- **ファイル**: `.env.example`
+- **用途**: 環境変数のテンプレート（Git管理対象）
+- **使用方法**:
+  - 開発環境: `.env.example` を `.env.local` にコピーして編集
+  - 本番環境: `.env.example` を参考に NAS上に `.env.production` を作成
 
 ### ステージング環境（検討中）
 - ベストプラクティスに基づき、必要に応じて追加
@@ -46,7 +63,7 @@
 - **ヘルスチェック**: 有効
 
 #### 2. WordPress (wordpress)
-- **イメージ**: `akirakano/trust-code-wordpress:latest`
+- **イメージ**: `akirakano1101/trust-code-wordpress:latest`
 - **コンテナ名**: `wp-app`
 - **ベースイメージ**: `wordpress:latest`
 - **追加機能**:
@@ -171,7 +188,60 @@ docker-compose down
 
 ### 本番デプロイフロー
 
-#### 方法1: テーマビルド統合型（推奨）
+**📖 詳細な手順**: `docs/deployment-guide.md` を参照してください。
+
+#### 🔴 初回セットアップ または Dockerイメージの変更時
+
+**対象**: `Dockerfile`, `init-wordpress.sh`, `docker-entrypoint-wrapper.sh` などの変更
+
+##### 1. 環境変数ファイルを準備
+```bash
+# 開発環境（ローカル）
+cp .env.example .env.local
+# .env.local を編集（WP_HOME, MYSQL_PASSWORD など）
+
+# 本番環境（NAS上）
+# NASに SSH接続して .env.production を作成
+ssh root@AkiraSynology
+cd /volume1/docker/trust-code
+# .env.production を作成・編集（WP_HOME=https://trust-code.net など）
+```
+
+##### 2. Dockerイメージをビルド・プッシュ（ローカル）
+```bash
+cd /Users/akirakano/IdeaProjects/homepage
+./build-and-push.sh
+```
+
+**処理内容**:
+1. Docker Hubへのログイン確認
+2. WordPress カスタムイメージをビルド
+3. タグ付け（`latest` + タイムスタンプ版）
+4. Docker Hub にプッシュ
+5. 次のステップを表示
+
+##### 3. NASで最新イメージをPULL
+```bash
+ssh root@AkiraSynology
+cd /volume1/docker/trust-code
+docker pull akirakano1101/trust-code-wordpress:latest
+docker-compose -f docker-compose.production.yml --env-file .env.production down
+docker-compose -f docker-compose.production.yml --env-file .env.production up -d
+```
+
+##### 4. ログ確認
+```bash
+docker-compose -f docker-compose.production.yml --env-file .env.production logs -f wordpress
+# "WordPress initialized. Setting up URLs..." が表示されることを確認
+```
+
+---
+
+#### 🟢 テーマの変更のみ
+
+**対象**: React/TypeScript ソースコード、PHPテンプレート、スタイルシート
+
+##### 方法1: テーマビルド統合型（推奨）
 ```bash
 cd wordpress/themes/readdy-theme4
 ./deploy-prod.sh
@@ -183,7 +253,7 @@ cd wordpress/themes/readdy-theme4
 3. `npm install`
 4. 本番ビルド（`npm run build`）
 5. アセットコピー（`npm run copy:assets`）
-6. ユーザー確認後、`rsync` でNASへテーマを転送
+6. ユーザー確認後、NASへテーマを転送（scp）
 7. NAS上での操作手順を表示
 
 **特徴**:
@@ -197,26 +267,12 @@ cd wordpress/themes/readdy-theme4
 - `NAS_HOST`: NASのホスト名（デフォルト: AkiraSynology）
 - `NAS_PROJECT_PATH`: NASのプロジェクトパス（デフォルト: /volume1/docker/trust-code）
 
-#### 方法2: テーマのみデプロイ
-```bash
-# プロジェクトルートで
-./deploy-to-nas.sh
-```
-
-**用途**: 既にビルド済みのテーマをNASへデプロイする場合
-
-#### 3. NAS上での操作
+##### 方法2: NAS上での操作
 ```bash
 ssh root@AkiraSynology
 cd /volume1/docker/trust-code
-docker-compose -f docker-compose.production.yml --env-file .env.production restart wordpress
-docker-compose -f docker-compose.production.yml --env-file .env.production exec -T wordpress wp cache flush --allow-root
-docker-compose -f docker-compose.production.yml --env-file .env.production exec -T wordpress wp rewrite flush --allow-root
-```
-
-#### 4. Dockerイメージのビルド・プッシュ（必要時）
-```bash
-./build-and-push.sh
+docker-compose -f docker-compose.production.yml --env-file .env.production exec wordpress wp cache flush --allow-root
+docker-compose -f docker-compose.production.yml --env-file .env.production exec wordpress wp rewrite flush --allow-root
 ```
 
 ---
@@ -549,6 +605,10 @@ homepage/
 
 ## 本番環境へのデプロイ（NAS）
 
+**詳細な手順書**: `docs/deployment-guide.md` を参照してください。
+
+以下は概要のみ記載します。完全な手順については上記ドキュメントをご覧ください。
+
 ### Docker Composeのvolume機能を利用したデプロイ
 
 #### 仕組み
@@ -742,4 +802,312 @@ wp rewrite flush --hard --allow-root --path=/var/www/html
 
 ---
 
-**最終更新**: 2025-10-12
+## 🚨 トラブルシューティング（最重要）
+
+### `:8080` リダイレクト問題とブラウザキャッシュ
+
+**⚠️ 最重要**: この問題は解決に非常に時間がかかる可能性があります。サーバー側が正常でも、**ブラウザキャッシュ**が原因で問題が継続することがあります。
+
+#### 症状
+
+- `https://trust-code.net` にアクセスすると `http://trust-code.net:8080` にリダイレクトされる
+- `ERR_SSL_PROTOCOL_ERROR` または接続エラーが表示される
+- トップページは表示されるが、`/about` やブログ記事にアクセスすると404または `ERR_SSL_PROTOCOL_ERROR`
+
+#### 原因（複数の要因が重なる）
+
+1. **Nginx設定**: `proxy_set_header Host $host;` でポート番号 `:8080` が含まれる
+2. **functions.php**: `$_SERVER['HTTP_HOST']` にポート番号が含まれ、WordPressが誤ったURLを生成
+3. **.htaccess**: 空または不完全で、React SPAのルーティングが機能しない
+4. **ブラウザキャッシュ（最も厄介）**:
+   - **301 リダイレクト**がブラウザに永続キャッシュされる
+   - **HSTS（HTTP Strict Transport Security）ポリシー**として保存される
+   - サーバー側を修正してもブラウザがキャッシュからリダイレクトを実行し続ける
+
+#### 解決策
+
+##### Step 1: サーバー側の修正
+
+**1.1 Nginx設定を修正** (`nginx/conf.d/production.conf`):
+```nginx
+location / {
+  proxy_pass http://wordpress;
+  # ポート番号を除去したホスト名を明示的に設定
+  proxy_set_header Host              trust-code.net;
+  proxy_set_header X-Forwarded-Host  trust-code.net;
+  proxy_set_header X-Forwarded-Port  443;
+  proxy_set_header X-Forwarded-Proto https;
+  # ...
+}
+```
+
+**1.2 functions.php を修正** (`wordpress/themes/readdy-theme4/functions.php`):
+```php
+function readdy_fix_server_vars() {
+  if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+    $_SERVER['SERVER_PORT'] = 443;
+    $_SERVER['HTTPS'] = 'on';
+
+    // HTTP_HOST からポート番号を削除
+    if (!empty($_SERVER['HTTP_HOST'])) {
+      $_SERVER['HTTP_HOST'] = preg_replace('/:\d+$/', '', $_SERVER['HTTP_HOST']);
+    }
+  }
+}
+add_action('muplugins_loaded', 'readdy_fix_server_vars');
+```
+
+**1.3 .htaccess を自動生成** (`wordpress/init-wordpress.sh`):
+```bash
+# .htaccess を強制作成（React SPAルーティング用）
+if [ ! -f /var/www/html/.htaccess ] || ! grep -q "RewriteRule" /var/www/html/.htaccess; then
+  echo "Creating .htaccess for React SPA routing..."
+  cat > /var/www/html/.htaccess << 'HTACCESS_EOF'
+# BEGIN WordPress
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteBase /
+RewriteRule ^index\.php$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]
+</IfModule>
+# END WordPress
+HTACCESS_EOF
+  echo ".htaccess created successfully"
+fi
+```
+
+**1.4 WordPressキャッシュとトランジェントを削除** (NAS上で実行):
+```bash
+cd /volume1/docker/trust-code
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env.production exec db mysql -uroot -p'MYSQL_ROOT_PASSWORD' wordpress_db -e "DELETE FROM wp_options WHERE option_name LIKE '%transient%';"
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env.production exec -T wordpress wp cache flush --allow-root
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env.production restart wordpress
+```
+
+##### Step 2: デプロイ
+
+```bash
+# ローカル（Mac）で実行
+cd /Users/akirakano/IdeaProjects/homepage
+
+# Dockerイメージをビルド＆プッシュ
+./build-and-push.sh
+
+# テーマをビルド＆NASにデプロイ
+./wordpress/themes/readdy-theme4/deploy-prod.sh
+# Step 6: y を選択（イメージ更新）
+```
+
+##### Step 3: ブラウザキャッシュのクリア（最重要）
+
+**3.1 Chrome / Arc（Mac & PC）**:
+
+1. **HSTSキャッシュを削除**:
+   - Chrome: `chrome://net-internals/#hsts` にアクセス
+   - Arc: `arc://net-internals/#hsts` にアクセス
+   - 「Delete domain security policies」セクションで `trust-code.net` と入力
+   - **Delete** ボタンをクリック
+
+2. **ブラウザを完全に終了**:
+   - Mac: `Cmd+Q` でブラウザを完全終了
+   - Windows: タスクマネージャーでプロセスを終了
+
+3. **ブラウザを再起動**して、新しいシークレットウィンドウで `https://trust-code.net` にアクセス
+
+**3.2 Safari（Mac）**:
+```bash
+# キャッシュをクリア
+環境設定 → 詳細 → 「開発」メニューを表示 にチェック
+開発 → キャッシュを空にする（Cmd+Option+E）
+
+# DNSキャッシュもクリア（Mac全体）
+sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
+```
+
+**3.3 スマートフォン（Chrome）**:
+
+1. Chrome設定 → プライバシーとセキュリティ → 閲覧履歴データの削除
+2. **期間**: 全期間
+3. **キャッシュされた画像とファイル** と **Cookie とサイトデータ** をチェック
+4. データを削除
+5. Chromeアプリを完全に終了して再起動
+
+##### Step 4: Cloudflareのキャッシュをパージ
+
+Cloudflareダッシュボードで：
+1. `trust-code.net` ドメインを選択
+2. **キャッシング** → **構成**
+3. **キャッシュをパージ** → **すべてをパージ**
+
+#### 検証方法
+
+**4.1 サーバー側の確認** (NAS上で実行):
+```bash
+# .htaccess の内容確認
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env.production exec wordpress cat /var/www/html/.htaccess
+
+# RewriteRule が含まれていることを確認
+# 空または不完全な場合は init-wordpress.sh の修正が必要
+
+# Nginx経由でのアクセステスト
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env.production exec wordpress curl -I http://wp-nginx/
+# 200 OK が返ることを確認
+```
+
+**4.2 ブラウザでの確認**:
+
+1. **Safari（最も信頼できる）**でアクセス:
+   - Safariはキャッシュが比較的弱いため、サーバー側の状態を確認しやすい
+   - `https://trust-code.net/`, `https://trust-code.net/about` が正常に表示されるか確認
+
+2. **Chrome/Arc（HSTSキャッシュクリア後）**でアクセス:
+   - シークレットモードで `https://trust-code.net` にアクセス
+   - 開発者ツール → ネットワークタブで最初のリクエストのステータスを確認
+   - `301` や `Location: http://trust-code.net:8080/` が表示されないことを確認
+
+3. **別のデバイス（スマートフォンなど）**でアクセス:
+   - 最もクリーンな検証方法
+   - キャッシュの影響を受けていない状態でサーバー側の動作を確認
+
+#### 重要なポイント
+
+- ✅ **Safari で正常に動作すれば、サーバー側は正常**
+- ✅ **Chrome/Arc で問題が継続する場合は、HSTSキャッシュが原因**
+- ⚠️ **301リダイレクトのキャッシュは非常に強力**で、通常のキャッシュクリアでは削除されないことがある
+- ⚠️ **HSTSポリシーはセキュリティ機能**のため、意図的に強力にキャッシュされる
+- ⚠️ **DNSキャッシュは関係ない場合がほとんど**（最後の手段として実行）
+
+#### トラブルシューティングの優先順位
+
+1. **まず**: 別のブラウザ（Safari）またはデバイス（スマートフォン）で確認
+2. **次に**: Chrome/Arc の HSTS キャッシュを削除（`chrome://net-internals/#hsts`）
+3. **それでもダメなら**: ブラウザのキャッシュを完全削除（全期間）
+4. **最後の手段**: Cloudflare のキャッシュパージ + DNSキャッシュクリア
+
+#### 参考資料
+
+- [Qiita: bashのheredocでsudo -iを使う方法](https://qiita.com/4486/items/598688dc1d2c05cb7890)
+- Chrome HSTS Preload List: `chrome://net-internals/#hsts`
+
+---
+
+### 2025-10-13
+
+#### 環境変数の動的設定とデプロイフロー改善
+
+**目的**: ビルド時に環境変数が固定される問題を解決し、同じDockerイメージを複数環境で使い回せるようにする。
+
+**問題点**:
+- `docker-compose.production.yml` で `WP_HOME` と `WP_SITEURL` がハードコードされていた
+- NASでのビルドが遅いため、Docker Hub からイメージをPULLする運用に変更したい
+
+**修正内容**:
+
+1. **docker-compose.production.yml を修正** (`wordpress/docker-compose.production.yml:23-52`):
+   - ハードコードされたURLを環境変数参照に変更
+   - `WP_HOME: ${WP_HOME}`
+   - `WP_SITEURL: ${WP_SITEURL}`
+   - データベース設定も環境変数参照に統一
+   - `WORDPRESS_CONFIG_EXTRA` でHTTPS検知とCloudflare対応を追加
+
+2. **docker-compose.yml を修正** (`docker-compose.yml:47-48`):
+   - 開発環境でも環境変数から読み込むように変更
+   - デフォルト値を設定: `${WP_HOME:-http://localhost:8080}`
+
+3. **.env.example を作成** (`.env.example`):
+   - 環境変数のテンプレートファイルを作成
+   - 開発環境と本番環境の両方の設定例を記載
+   - Git管理対象として追加
+
+4. **デプロイ手順書を作成** (`docs/deployment-guide.md`):
+   - 連番付きの詳細な手順書を作成
+   - 環境変数の設定方法
+   - Docker イメージのビルド・プッシュ手順
+   - 本番環境（NAS）へのデプロイ手順
+   - トラブルシューティング
+
+5. **CLAUDE.md を更新**:
+   - 環境構成セクションに環境変数の詳細を追加
+   - 「本番環境へのデプロイ（NAS）」セクションに手順書への参照を追加
+   - 変更履歴を追加
+
+**検証済み**:
+- `init-wordpress.sh` は実行時に環境変数を参照するため、問題なし
+- `Dockerfile` はビルド時に固定値を埋め込んでいないため、問題なし
+
+**運用フロー**:
+```
+開発環境（Mac）
+  ↓ docker build & push
+Docker Hub
+  ↓ docker pull
+本番環境（NAS）
+  ↓ 環境変数で動的設定
+WP_HOME=https://trust-code.net
+```
+
+**メリット**:
+- ✅ 同じイメージを複数環境で使い回せる
+- ✅ URL変更時にイメージの再ビルドが不要
+- ✅ NASでのビルド不要（PULLのみ）
+- ✅ 環境ごとの設定を `.env` ファイルで管理
+
+---
+
+#### build-and-push.sh スクリプトの作成とデプロイ手順の明確化
+
+**背景**: ユーザーから「Docker Hubにイメージをpushしておく必要があるのでは？」という指摘を受け、デプロイ手順が不明確であることが判明。
+
+**問題点**:
+- `build-and-push.sh` スクリプトが存在しなかった
+- 手順書に「docker pull」の前にpushが必要であることが明記されていなかった
+- Dockerイメージのビルド・プッシュとテーマのデプロイが混同されていた
+
+**修正内容**:
+
+1. **build-and-push.sh スクリプトを作成** (`build-and-push.sh`):
+   - Docker Hubへのログイン確認機能
+   - Dockerイメージのビルド
+   - タグ付け（`latest` + タイムスタンプ版）
+   - Docker Hub へのプッシュ
+   - カラフルなログ出力と次のステップ表示
+   - エラーハンドリング
+
+2. **deployment-guide.md を大幅改訂** (`docs/deployment-guide.md`):
+   - **1章「概要」に「デプロイのタイミング」セクションを追加**
+     - 🔴 初回セットアップ / Dockerイメージの変更時
+     - 🟢 テーマの変更のみ
+   - **アーキテクチャ図を詳細化**（開発環境→Docker Hub→本番環境のフロー）
+   - **4章「Docker イメージのビルド・プッシュ」を詳細化**
+     - 実施タイミングを明確化
+     - build-and-push.sh の使い方を説明
+     - 出力例を追加
+   - **5章「本番環境（NAS）へのデプロイ」に前提条件を追加**
+     - ✅ Docker Hub に最新イメージがプッシュ済み
+     - ✅ NAS上に `.env.production` が作成済み
+   - **6章「トラブルシューティング」に「Docker Hub にイメージがない」エラーを追加**
+   - **まとめセクションに作業フローを追加**（初回 / テーマのみ）
+
+3. **CLAUDE.md の「本番デプロイフロー」セクションを再構成**:
+   - 🔴 初回セットアップ / Dockerイメージの変更時
+   - 🟢 テーマの変更のみ
+   - `docs/deployment-guide.md` への参照を追加
+
+**ベストプラクティス**:
+- **Dockerイメージのバージョニング**: `latest` + タイムスタンプ版（ロールバック用）
+- **責任の分離**:
+  - `build-and-push.sh`: Dockerイメージのビルド・プッシュ
+  - `deploy-dev.sh`: 開発環境でのテーマビルド・デプロイ
+  - `deploy-prod.sh`: 本番環境へのテーマデプロイ
+- **明確な前提条件**: 各手順の前提条件を明示
+
+**検証済み**:
+- `build-and-push.sh` が正しく動作することを確認
+- 手順書の流れが明確であることを確認
+
+---
+
+**最終更新**: 2025-10-13

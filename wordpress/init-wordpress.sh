@@ -59,4 +59,26 @@ else
   echo "wp-cli not found, skipping database URL update"
 fi
 
+# .htaccess を強制作成（React SPAルーティング用）
+# wp rewrite flush が正しく動作しない場合があるため、常に確実なルールを設定
+if [ ! -f /var/www/html/.htaccess ] || ! grep -q "RewriteRule" /var/www/html/.htaccess; then
+  echo "Creating .htaccess for React SPA routing..."
+  cat > /var/www/html/.htaccess << 'HTACCESS_EOF'
+# BEGIN WordPress
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteBase /
+RewriteRule ^index\.php$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]
+</IfModule>
+# END WordPress
+HTACCESS_EOF
+  echo ".htaccess created successfully"
+else
+  echo ".htaccess already exists with RewriteRule"
+fi
+
 echo "WordPress initialization complete."
