@@ -1,3 +1,341 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  /* カスタムフォント設定 */
+  body {
+    font-feature-settings: "palt";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* コードフォント */
+  code, pre {
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  }
+}
+
+@layer components {
+  /* Markdown記事用のリッチスタイル */
+  .markdown-content {
+    @apply text-gray-800 leading-relaxed;
+  }
+
+  /* 見出しスタイル */
+  .markdown-content h1 {
+    @apply text-4xl font-bold text-purple-900 mt-12 mb-6 pb-4 border-b-4 border-purple-300;
+    background: linear-gradient(to right, #f3e8ff, transparent);
+    padding-left: 1rem;
+    border-radius: 0.25rem;
+  }
+
+  .markdown-content h2 {
+    @apply text-3xl font-bold text-purple-900 mt-10 mb-5 pb-3 border-b-2 border-purple-200;
+    padding-left: 0.75rem;
+    border-left: 4px solid #a855f7;
+  }
+
+  .markdown-content h3 {
+    @apply text-2xl font-semibold text-purple-800 mt-8 mb-4;
+    padding-left: 0.5rem;
+    border-left: 3px solid #c084fc;
+  }
+
+  .markdown-content h4 {
+    @apply text-xl font-semibold text-purple-700 mt-6 mb-3;
+  }
+
+  .markdown-content h5 {
+    @apply text-lg font-medium text-purple-600 mt-4 mb-2;
+  }
+
+  .markdown-content h6 {
+    @apply text-base font-medium text-purple-500 mt-3 mb-2;
+  }
+
+  /* 段落スタイル */
+  .markdown-content p {
+    @apply mb-6 leading-relaxed text-gray-700;
+    line-height: 1.8;
+  }
+
+  /* リンクスタイル */
+  .markdown-content a {
+    @apply text-purple-600 font-medium no-underline transition-all duration-200;
+    border-bottom: 2px solid transparent;
+  }
+
+  .markdown-content a:hover {
+    @apply text-purple-800;
+    border-bottom-color: #a855f7;
+  }
+
+  .markdown-content a:not([href^="http"]):not([href^="https"]) {
+    /* 内部リンク */
+    @apply relative;
+  }
+
+  .markdown-content a[href^="http"]::after,
+  .markdown-content a[href^="https"]::after {
+    /* 外部リンクアイコン */
+    content: "↗";
+    @apply ml-1 text-xs opacity-70;
+  }
+
+  /* 強調・斜体 */
+  .markdown-content strong {
+    @apply font-bold text-purple-900;
+  }
+
+  .markdown-content em {
+    @apply italic text-gray-800;
+  }
+
+  /* インラインコード */
+  .markdown-content code:not(pre code) {
+    @apply px-2 py-1 bg-purple-50 text-purple-700 rounded text-sm font-mono;
+    border: 1px solid #e9d5ff;
+  }
+
+  /* コードブロック */
+  .markdown-content pre {
+    @apply bg-gray-900 text-gray-100 rounded-xl shadow-2xl p-6 my-8 overflow-x-auto;
+    border: 1px solid #374151;
+  }
+
+  .markdown-content pre code {
+    @apply bg-transparent text-gray-100 p-0 border-0;
+    font-size: 0.9rem;
+    line-height: 1.7;
+  }
+
+  /* 引用ブロック */
+  .markdown-content blockquote {
+    @apply border-l-4 border-purple-400 pl-6 pr-4 py-4 my-6 italic text-gray-700 bg-gradient-to-r from-purple-50 to-transparent rounded-r-lg;
+    box-shadow: 0 2px 8px rgba(168, 85, 247, 0.1);
+  }
+
+  .markdown-content blockquote p {
+    @apply mb-2;
+  }
+
+  .markdown-content blockquote p:last-child {
+    @apply mb-0;
+  }
+
+  /* リスト */
+  .markdown-content ul {
+    @apply list-disc ml-8 mb-6 space-y-3;
+  }
+
+  .markdown-content ol {
+    @apply list-decimal ml-8 mb-6 space-y-3;
+  }
+
+  .markdown-content li {
+    @apply text-gray-700 leading-relaxed;
+    padding-left: 0.5rem;
+  }
+
+  .markdown-content li::marker {
+    @apply text-purple-500 font-bold;
+  }
+
+  .markdown-content li > ul,
+  .markdown-content li > ol {
+    @apply mt-3 mb-2;
+  }
+
+  /* ネストされたリスト */
+  .markdown-content li ul,
+  .markdown-content li ol {
+    @apply ml-6;
+  }
+
+  /* 水平線 */
+  .markdown-content hr {
+    @apply border-0 h-1 bg-gradient-to-r from-purple-200 via-purple-300 to-purple-200 my-12 rounded;
+  }
+
+  /* テーブル */
+  .markdown-content table {
+    @apply w-full border-collapse my-8 shadow-lg rounded-lg overflow-hidden;
+  }
+
+  .markdown-content thead {
+    @apply bg-gradient-to-r from-purple-100 to-purple-50;
+  }
+
+  .markdown-content th {
+    @apply border border-purple-200 px-6 py-4 text-left font-bold text-purple-900;
+    font-size: 0.95rem;
+  }
+
+  .markdown-content td {
+    @apply border border-purple-100 px-6 py-4 text-gray-700;
+  }
+
+  .markdown-content tbody tr {
+    @apply transition-colors duration-150;
+  }
+
+  .markdown-content tbody tr:nth-child(even) {
+    @apply bg-purple-50/50;
+  }
+
+  .markdown-content tbody tr:hover {
+    @apply bg-purple-100/70;
+  }
+
+  /* 画像 */
+  .markdown-content img {
+    @apply rounded-xl shadow-2xl mx-auto my-8 max-w-full;
+    border: 1px solid #e9d5ff;
+  }
+
+  /* 画像キャプション */
+  .markdown-content figure {
+    @apply my-8;
+  }
+
+  .markdown-content figcaption {
+    @apply text-center text-sm text-gray-600 mt-3 italic;
+  }
+
+  /* カスタムブロック（Note, Warning, Tip, Danger, Info） */
+  .markdown-content .custom-block {
+    @apply rounded-xl p-6 my-8 border-l-4 shadow-lg;
+  }
+
+  .markdown-content .custom-block-title {
+    @apply font-bold mb-3 flex items-center gap-2 text-lg;
+  }
+
+  .markdown-content .custom-block-content {
+    @apply text-gray-700;
+  }
+
+  /* Note ブロック */
+  .markdown-content .custom-block-note {
+    @apply bg-gradient-to-r from-blue-50 to-blue-50/30 border-blue-400;
+  }
+
+  .markdown-content .custom-block-note .custom-block-title {
+    @apply text-blue-900;
+  }
+
+  /* Warning ブロック */
+  .markdown-content .custom-block-warning {
+    @apply bg-gradient-to-r from-yellow-50 to-yellow-50/30 border-yellow-400;
+  }
+
+  .markdown-content .custom-block-warning .custom-block-title {
+    @apply text-yellow-900;
+  }
+
+  /* Tip ブロック */
+  .markdown-content .custom-block-tip {
+    @apply bg-gradient-to-r from-green-50 to-green-50/30 border-green-400;
+  }
+
+  .markdown-content .custom-block-tip .custom-block-title {
+    @apply text-green-900;
+  }
+
+  /* Danger ブロック */
+  .markdown-content .custom-block-danger {
+    @apply bg-gradient-to-r from-red-50 to-red-50/30 border-red-400;
+  }
+
+  .markdown-content .custom-block-danger .custom-block-title {
+    @apply text-red-900;
+  }
+
+  /* Info ブロック */
+  .markdown-content .custom-block-info {
+    @apply bg-gradient-to-r from-purple-50 to-purple-50/30 border-purple-400;
+  }
+
+  .markdown-content .custom-block-info .custom-block-title {
+    @apply text-purple-900;
+  }
+
+  /* 定義リスト */
+  .markdown-content dl {
+    @apply my-6;
+  }
+
+  .markdown-content dt {
+    @apply font-bold text-purple-900 mt-4 mb-2;
+  }
+
+  .markdown-content dd {
+    @apply ml-8 mb-4 text-gray-700 pl-4 border-l-2 border-purple-200;
+  }
+
+  /* キーボード入力 */
+  .markdown-content kbd {
+    @apply px-3 py-1 bg-gray-100 border border-gray-300 rounded text-sm font-mono shadow-sm;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  /* マーカー（ハイライト） */
+  .markdown-content mark {
+    @apply bg-yellow-200 px-1 rounded;
+  }
+
+  /* 取り消し線 */
+  .markdown-content del {
+    @apply text-gray-500 line-through;
+  }
+
+  /* 下線 */
+  .markdown-content ins {
+    @apply text-green-700 underline decoration-green-500;
+  }
+
+  /* 略語 */
+  .markdown-content abbr {
+    @apply border-b-2 border-dotted border-purple-400 cursor-help;
+  }
+
+  /* 整形済みテキスト（コードブロック以外） */
+  .markdown-content samp {
+    @apply font-mono text-sm bg-gray-100 px-1 py-0.5 rounded;
+  }
+
+  /* 変数 */
+  .markdown-content var {
+    @apply font-mono text-purple-600 italic;
+  }
+}
+
+@layer utilities {
+  /* スクロールバーのカスタマイズ */
+  .markdown-content pre::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .markdown-content pre::-webkit-scrollbar-track {
+    @apply bg-gray-800 rounded;
+  }
+
+  .markdown-content pre::-webkit-scrollbar-thumb {
+    @apply bg-purple-500 rounded;
+  }
+
+  .markdown-content pre::-webkit-scrollbar-thumb:hover {
+    @apply bg-purple-600;
+  }
+
+  /* スムーススクロール */
+  .markdown-content {
+    scroll-behavior: smooth;
+  }
+
+  /* テキスト選択時の背景色 */
+  .markdown-content ::selection {
+    @apply bg-purple-200 text-purple-900;
+  }
+}

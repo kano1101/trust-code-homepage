@@ -46,6 +46,7 @@ services:
       WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
       WP_HOME: ${WP_HOME:-http://localhost:8080}
       WP_SITEURL: ${WP_SITEURL:-http://localhost:8080}
+      GA_MEASUREMENT_ID: ${GA_MEASUREMENT_ID:-}
       WORDPRESS_CONFIG_EXTRA: |
         define('WP_MEMORY_LIMIT','256M');
         define('WP_DEBUG', true);

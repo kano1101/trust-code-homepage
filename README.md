@@ -40,30 +40,41 @@ WordPressの開発・本番環境を Docker で管理するプロジェクト
 
 ### 本番環境（NAS）デプロイ
 
-#### 方法1: Docker Hubからイメージをpull（推奨）
+**詳細な手順**: `docs/deployment-guide.md` を参照してください。
+
+#### 🔴 初回セットアップ / Dockerイメージの変更時
 
 1. ローカルでイメージをビルド＆プッシュ:
    ```bash
    ./build-and-push.sh
    ```
 
-2. NASで以下を実行:
+2. NASで最新イメージをpullして起動:
    ```bash
-   # nginx設定を本番用に切り替え
-   mv nginx/conf.d/default.conf nginx/conf.d/default.conf.dev
-   mv nginx/conf.d/production.conf nginx/conf.d/default.conf
+   cd /volume1/docker/trust-code/
 
-   # 本番環境起動
-   docker-compose -f docker-compose.production.yml --env-file .env.production pull
-   docker-compose -f docker-compose.production.yml --env-file .env.production up -d
+   # 最新イメージをpull
+   docker pull akirakano1101/trust-code-wordpress:latest
+
+   # コンテナを起動（ベースファイル + オーバーレイファイルの両方を指定）
+   sudo docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env.production down
+   sudo docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env.production up -d
    ```
 
-#### 方法2: ローカルでビルド
+#### 🟢 テーマの変更のみ
 
-```bash
-# 本番環境起動
-docker-compose -f docker-compose.production.yml --env-file .env.production up -d --build
-```
+1. ローカルでテーマをビルド＆デプロイ:
+   ```bash
+   cd wordpress/themes/readdy-theme4
+   ./deploy-prod.sh
+   ```
+
+2. NAS上でキャッシュをクリア:
+   ```bash
+   cd /volume1/docker/trust-code/
+   sudo docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env.production exec wordpress wp cache flush --allow-root
+   sudo docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env.production exec wordpress wp rewrite flush --allow-root
+   ```
 
 ## 環境変数
 
@@ -75,7 +86,8 @@ docker-compose -f docker-compose.production.yml --env-file .env.production up -d
 - `MYSQL_DATABASE`: データベース名
 - `MYSQL_USER`: MySQLユーザー名
 - `MYSQL_PASSWORD`: MySQLパスワード
-- `CF_TUNNEL_TOKEN`: Cloudflare Tunnelトークン
+- `CF_TUNNEL_TOKEN`: Cloudflare Tunnelトークン（本番環境のみ）
+- `GA_MEASUREMENT_ID`: Google Analytics 測定ID（オプション）
 
 ## ディレクトリ構成
 

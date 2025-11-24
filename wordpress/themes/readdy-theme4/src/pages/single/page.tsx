@@ -147,41 +147,7 @@ export default function SinglePost() {
 
             {/* Content */}
             <div
-              className="prose prose-lg prose-purple max-w-none mb-8
-                prose-headings:text-purple-900 prose-headings:font-bold
-                prose-h1:text-3xl prose-h1:mb-4 prose-h1:mt-8 prose-h1:pb-2 prose-h1:border-b-2 prose-h1:border-purple-200
-                prose-h2:text-2xl prose-h2:mb-3 prose-h2:mt-8 prose-h2:pb-2 prose-h2:border-b prose-h2:border-purple-100
-                prose-h3:text-xl prose-h3:mb-2 prose-h3:mt-6
-                prose-h4:text-lg prose-h4:mb-2 prose-h4:mt-4
-                prose-p:text-gray-700 prose-p:leading-relaxed prose-p:mb-4
-                prose-a:text-purple-600 prose-a:font-medium prose-a:no-underline hover:prose-a:text-purple-800 hover:prose-a:underline
-                prose-strong:text-purple-900 prose-strong:font-bold
-                prose-em:text-gray-800 prose-em:italic
-                prose-code:text-purple-700 prose-code:bg-purple-50 prose-code:px-2 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono
-                prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:rounded-lg prose-pre:shadow-lg prose-pre:p-4 prose-pre:overflow-x-auto
-                prose-pre>code:bg-transparent prose-pre>code:text-gray-100 prose-pre>code:p-0
-                prose-ul:list-disc prose-ul:ml-6 prose-ul:mb-4 prose-ul:space-y-2
-                prose-ol:list-decimal prose-ol:ml-6 prose-ol:mb-4 prose-ol:space-y-2
-                prose-li:text-gray-700
-                prose-li>ul:mt-2 prose-li>ol:mt-2
-                prose-blockquote:border-l-4 prose-blockquote:border-purple-400 prose-blockquote:pl-4 prose-blockquote:pr-4 prose-blockquote:py-2 prose-blockquote:italic prose-blockquote:text-gray-700 prose-blockquote:bg-purple-50 prose-blockquote:rounded-r
-                prose-img:rounded-lg prose-img:shadow-lg prose-img:mx-auto prose-img:my-6
-                prose-hr:border-purple-200 prose-hr:my-8
-                prose-table:border-collapse prose-table:w-full prose-table:my-6
-                prose-thead:bg-purple-100
-                prose-th:border prose-th:border-purple-200 prose-th:px-4 prose-th:py-2 prose-th:text-left prose-th:font-semibold prose-th:text-purple-900
-                prose-td:border prose-td:border-purple-200 prose-td:px-4 prose-td:py-2 prose-td:text-gray-700
-                prose-tr:even:bg-purple-50
-                [&_.custom-block]:rounded-lg [&_.custom-block]:p-4 [&_.custom-block]:my-6 [&_.custom-block]:border-l-4
-                [&_.custom-block-note]:bg-blue-50 [&_.custom-block-note]:border-blue-400 [&_.custom-block-note_.custom-block-title]:text-blue-900
-                [&_.custom-block-warning]:bg-yellow-50 [&_.custom-block-warning]:border-yellow-400 [&_.custom-block-warning_.custom-block-title]:text-yellow-900
-                [&_.custom-block-tip]:bg-green-50 [&_.custom-block-tip]:border-green-400 [&_.custom-block-tip_.custom-block-title]:text-green-900
-                [&_.custom-block-danger]:bg-red-50 [&_.custom-block-danger]:border-red-400 [&_.custom-block-danger_.custom-block-title]:text-red-900
-                [&_.custom-block-info]:bg-purple-50 [&_.custom-block-info]:border-purple-400 [&_.custom-block-info_.custom-block-title]:text-purple-900
-                [&_.custom-block-title]:font-bold [&_.custom-block-title]:mb-2 [&_.custom-block-title]:flex [&_.custom-block-title]:items-center [&_.custom-block-title]:gap-2
-                [&_.custom-block-content]:text-gray-700
-                [&_.external-link]:inline-flex [&_.external-link]:items-center [&_.external-link]:gap-1
-                [&_.external-link::after]:content-['↗'] [&_.external-link::after]:text-xs [&_.external-link::after]:opacity-70"
+              className="markdown-content mb-8"
               dangerouslySetInnerHTML={{ __html: post.content.rendered }}
             />
 

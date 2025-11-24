@@ -10,6 +10,11 @@ volumes:
 
 services:
   db:
+    command:
+      - --max_connections=30
+      - --innodb_buffer_pool_size=128M
+      - --key_buffer_size=8M
+      - --table_open_cache=64
     volumes:
       - db_data:/var/lib/mysql
 
@@ -26,29 +31,23 @@ services:
       WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
       WP_HOME: ${WP_HOME}
       WP_SITEURL: ${WP_SITEURL}
+      GA_MEASUREMENT_ID: ${GA_MEASUREMENT_ID:-}
       WORDPRESS_CONFIG_EXTRA: |
-        define('WP_MEMORY_LIMIT','256M');
-        define('WP_DEBUG', false);
-        define('WP_DEBUG_LOG', false);
-        define('WP_DEBUG_DISPLAY', false);
+        define('WP_MEMORY_LIMIT','128M');
+        define('WP_MAX_MEMORY_LIMIT','256M');
         define('FS_METHOD','direct');
+        define('DISABLE_WP_CRON', true);
 
-        // 本番環境のみFORCE_SSL_ADMINとHTTPS検知を有効化
-        $$wp_home = getenv('WP_HOME');
-        if ($$wp_home && strpos($$wp_home, 'https://') === 0) {
-          define('FORCE_SSL_ADMIN', true);
-
-          // Cloudflare / 逆プロキシ下でのHTTPS検知
-          if (!empty($$_SERVER['HTTP_CF_VISITOR'])) {
-            $$_cf = json_decode($$_SERVER['HTTP_CF_VISITOR'], true);
-            if (!empty($$_cf['scheme']) && $$_cf['scheme'] === 'https') { $$_SERVER['HTTPS'] = 'on'; }
-          }
-          if (!empty($$_SERVER['HTTP_X_FORWARDED_PROTO']) && $$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
-            $$_SERVER['HTTPS'] = 'on';
-          }
-          if (!empty($$_SERVER['HTTP_X_FORWARDED_HOST'])) {
-            $$_SERVER['HTTP_HOST'] = $$_SERVER['HTTP_X_FORWARDED_HOST'];
-          }
+        // Cloudflare / 逆プロキシ下でのHTTPS検知
+        if (!empty($$_SERVER['HTTP_CF_VISITOR'])) {
+          $$_cf = json_decode($$_SERVER['HTTP_CF_VISITOR'], true);
+          if (!empty($$_cf['scheme']) && $$_cf['scheme'] === 'https') { $$_SERVER['HTTPS'] = 'on'; }
+        }
+        if (!empty($$_SERVER['HTTP_X_FORWARDED_PROTO']) && $$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+          $$_SERVER['HTTPS'] = 'on';
+        }
+        if (!empty($$_SERVER['HTTP_X_FORWARDED_HOST'])) {
+          $$_SERVER['HTTP_HOST'] = $$_SERVER['HTTP_X_FORWARDED_HOST'];
         }
     volumes:
       - wp_html:/var/www/html

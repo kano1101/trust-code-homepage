@@ -8,6 +8,10 @@
  * - お問い合わせフォーム
  */
 
+/* ========== Google Analytics 設定 ========== */
+// Google Analytics 測定IDを定義（環境変数から取得、なければ空）
+define('GA_MEASUREMENT_ID', getenv('GA_MEASUREMENT_ID') ?: '');
+
 /* ========== テーマサポートの設定 ========== */
 function readdy_theme_setup() {
   add_theme_support('title-tag');

@@ -10,8 +10,11 @@ NAS_USER="akira_kano1101"
 NAS_HOST="akirasynology"
 NAS_PORT=922
 NAS_THEME_PATH="/volume1/docker/trust-code/wordpress/themes/readdy-theme4"
-LOCAL_THEME_DIR="./wordpress/themes/readdy-theme4"
-PROJECT_ROOT="$(pwd)"
+
+# スクリプトの場所からテーマディレクトリを特定
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOCAL_THEME_DIR="$SCRIPT_DIR"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 NAS_COMPOSE_DIR="/volume1/docker/trust-code"
 
 # === ビルド処理 ===
