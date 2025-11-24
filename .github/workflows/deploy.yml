@@ -201,7 +201,7 @@ jobs:
           cd wordpress/themes/readdy-theme4
 
           # .gitignore や .DS_Store を除外してtar転送
-          COPYFILE_DISABLE=1 tar \
+          tar \
             --exclude='node_modules' \
             --exclude='out' \
             --exclude='src' \
@@ -215,7 +215,6 @@ jobs:
             --exclude='tsconfig.json' \
             --exclude='.gitignore' \
             --exclude='.DS_Store' \
-            --no-xattrs --no-mac-metadata --no-acls --no-fflags \
             -cf - . \
           | ssh -p "$NAS_PORT" "$NAS_USER@$NAS_HOST" "tar -C '$TMP_DIR' -xpf -"
 
@@ -290,12 +289,11 @@ jobs:
           ssh -p "$NAS_PORT" "$NAS_USER@$NAS_HOST" "rm -rf '$TMP_DIR' && mkdir -p '$TMP_DIR'"
 
           echo "📤 Transferring Docker files to NAS..."
-          COPYFILE_DISABLE=1 tar \
+          tar \
             --exclude='.git' \
             --exclude='node_modules' \
             --exclude='.env' \
             --exclude='.env.local' \
-            --no-xattrs --no-mac-metadata --no-acls --no-fflags \
             -cf - \
             docker-compose.yml \
             docker-compose.production.yml \
