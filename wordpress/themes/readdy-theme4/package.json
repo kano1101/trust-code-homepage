@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "copy:assets": "cp -r out/assets/* assets && cp out/.vite/manifest.json ."
+    "copy:assets": "mkdir -p assets && cp -r out/assets/* assets && cp out/.vite/manifest.json ."
   },
   "dependencies": {
     "i18next": "^25.3.2",
