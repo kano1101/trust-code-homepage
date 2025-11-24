@@ -40,9 +40,45 @@ WordPressの開発・本番環境を Docker で管理するプロジェクト
 
 ### 本番環境（NAS）デプロイ
 
+#### 📦 デプロイ方法
+
+このプロジェクトは、**手動デプロイ**と**GitHub Actions自動デプロイ**の2つの方法をサポートしています。
+
+##### 方法1: GitHub Actions（推奨）
+
+`main` または `master` ブランチにプッシュすると、自動的にデプロイが実行されます。
+
+```bash
+git add .
+git commit -m "Update theme styles"
+git push origin main
+```
+
+**セットアップ方法**: `docs/github-actions-setup.md` を参照してください。
+
+**クイックスタート（検証）**:
+```bash
+# 1. 環境変数ファイルを作成
+cp .env.secrets.example .env.secrets
+nano .env.secrets  # 実際の値を設定
+
+# 2. 検証スクリプトを実行
+./scripts/verify-secrets.sh
+
+# 3. すべてのテストに合格したらGitHub Secretsに設定
+```
+
+**メリット**:
+- ✅ git push で自動デプロイ
+- ✅ テーマのみの変更時はDockerイメージのビルドをスキップ
+- ✅ GitHub Actions UIでデプロイ状況を確認
+- ✅ Tailscale経由のセキュアな接続
+
+##### 方法2: 手動デプロイ
+
 **詳細な手順**: `docs/deployment-guide.md` を参照してください。
 
-#### 🔴 初回セットアップ / Dockerイメージの変更時
+**🔴 初回セットアップ / Dockerイメージの変更時**
 
 1. ローカルでイメージをビルド＆プッシュ:
    ```bash
@@ -61,7 +97,7 @@ WordPressの開発・本番環境を Docker で管理するプロジェクト
    sudo docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env.production up -d
    ```
 
-#### 🟢 テーマの変更のみ
+**🟢 テーマの変更のみ**
 
 1. ローカルでテーマをビルド＆デプロイ:
    ```bash

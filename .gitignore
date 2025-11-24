@@ -1,6 +1,7 @@
 # 環境変数ファイル（秘密情報）
 .env*
 !.env.example
+!.env.secrets.example
 
 # macOS
 .DS_Store

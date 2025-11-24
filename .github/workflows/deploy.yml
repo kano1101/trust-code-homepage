@@ -1,0 +1,393 @@
+name: Deploy Trust Code WordPress to NAS
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_docker_rebuild:
+        description: 'Force Docker image rebuild and push'
+        required: false
+        type: boolean
+        default: false
+      force_theme_rebuild:
+        description: 'Force theme rebuild and deploy'
+        required: false
+        type: boolean
+        default: false
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  # ========================================
+  # 変更検知
+  # ========================================
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      theme: ${{ steps.filter.outputs.theme }}
+      docker: ${{ steps.filter.outputs.docker }}
+      compose: ${{ steps.filter.outputs.compose }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for file changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            theme:
+              - 'wordpress/themes/readdy-theme4/**'
+              - '!wordpress/themes/readdy-theme4/node_modules/**'
+              - '!wordpress/themes/readdy-theme4/out/**'
+              - '!wordpress/themes/readdy-theme4/assets/**'
+            docker:
+              - 'wordpress/Dockerfile'
+              - 'wordpress/*.sh'
+              - 'nginx/**'
+              - 'php/**'
+            compose:
+              - 'docker-compose.yml'
+              - 'docker-compose.production.yml'
+              - '.env.example'
+
+  # ========================================
+  # テーマのビルド
+  # ========================================
+  build-theme:
+    name: Build Theme
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: |
+      needs.detect-changes.outputs.theme == 'true' ||
+      github.event.inputs.force_theme_rebuild == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: wordpress/themes/readdy-theme4/package-lock.json
+
+      - name: Clean build artifacts
+        run: |
+          cd wordpress/themes/readdy-theme4
+          rm -rf out dist node_modules/.vite_cache assets/*.js assets/*.css manifest.json 2>/dev/null || true
+
+      - name: Install dependencies
+        run: |
+          cd wordpress/themes/readdy-theme4
+          npm ci
+
+      - name: Build theme
+        run: |
+          cd wordpress/themes/readdy-theme4
+          npm run build
+          npm run copy:assets
+
+      - name: Upload theme artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: theme-build
+          path: |
+            wordpress/themes/readdy-theme4/assets/
+            wordpress/themes/readdy-theme4/manifest.json
+            wordpress/themes/readdy-theme4/*.php
+            wordpress/themes/readdy-theme4/inc/
+            wordpress/themes/readdy-theme4/style.css
+            wordpress/themes/readdy-theme4/screenshot.png
+          retention-days: 7
+
+  # ========================================
+  # Dockerイメージのビルド・プッシュ
+  # ========================================
+  build-docker:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: |
+      needs.detect-changes.outputs.docker == 'true' ||
+      github.event.inputs.force_docker_rebuild == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Generate version tag
+        id: version
+        run: echo "tag=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+
+      - name: Build and push WordPress image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./wordpress
+          file: ./wordpress/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_HUB_USERNAME }}/trust-code-wordpress:latest
+            ${{ secrets.DOCKER_HUB_USERNAME }}/trust-code-wordpress:${{ steps.version.outputs.tag }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/trust-code-wordpress:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/trust-code-wordpress:buildcache,mode=max
+
+      - name: Output image tags
+        run: |
+          echo "✅ Docker image pushed:"
+          echo "  - ${{ secrets.DOCKER_HUB_USERNAME }}/trust-code-wordpress:latest"
+          echo "  - ${{ secrets.DOCKER_HUB_USERNAME }}/trust-code-wordpress:${{ steps.version.outputs.tag }}"
+
+  # ========================================
+  # テーマのデプロイ（NAS）
+  # ========================================
+  deploy-theme:
+    name: Deploy Theme to NAS
+    runs-on: ubuntu-latest
+    needs: [detect-changes, build-theme]
+    if: |
+      needs.detect-changes.outputs.theme == 'true' ||
+      github.event.inputs.force_theme_rebuild == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download theme artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: theme-build
+          path: wordpress/themes/readdy-theme4
+
+#      - name: Connect to Tailscale
+#        uses: tailscale/github-action@v2
+#        with:
+#          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+#          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+#          tags: tag:github-actions
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.NAS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p ${{ secrets.NAS_SSH_PORT }} -H ${{ secrets.NAS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Deploy theme to NAS
+        run: |
+          NAS_USER="${{ secrets.NAS_USER }}"
+          NAS_HOST="${{ secrets.NAS_HOST }}"
+          NAS_PORT="${{ secrets.NAS_SSH_PORT }}"
+          NAS_THEME_PATH="/volume1/docker/trust-code/wordpress/themes/readdy-theme4"
+          TMP_DIR="/tmp/readdy-theme4-$(date +%s)"
+
+          echo "📦 Creating temporary directory on NAS..."
+          ssh -p "$NAS_PORT" "$NAS_USER@$NAS_HOST" "rm -rf '$TMP_DIR' && mkdir -p '$TMP_DIR'"
+
+          echo "📤 Transferring theme files to NAS..."
+          cd wordpress/themes/readdy-theme4
+
+          # .gitignore や .DS_Store を除外してtar転送
+          COPYFILE_DISABLE=1 tar \
+            --exclude='node_modules' \
+            --exclude='out' \
+            --exclude='src' \
+            --exclude='.git' \
+            --exclude='.vite' \
+            --exclude='*.sh' \
+            --exclude='package.json' \
+            --exclude='package-lock.json' \
+            --exclude='*.config.ts' \
+            --exclude='*.config.js' \
+            --exclude='tsconfig.json' \
+            --exclude='.gitignore' \
+            --exclude='.DS_Store' \
+            --no-xattrs --no-mac-metadata --no-acls --no-fflags \
+            -cf - . \
+          | ssh -p "$NAS_PORT" "$NAS_USER@$NAS_HOST" "tar -C '$TMP_DIR' -xpf -"
+
+          echo "🔄 Moving files to production directory..."
+          ssh -p "$NAS_PORT" "$NAS_USER@$NAS_HOST" << ENDSSH
+          # バックアップ
+          if [ -d "$NAS_THEME_PATH" ]; then
+            cp -r "$NAS_THEME_PATH" "${NAS_THEME_PATH}.backup-\$(date +%Y%m%d-%H%M%S)" 2>/dev/null || true
+          fi
+
+          # デプロイ
+          mkdir -p "$NAS_THEME_PATH"
+          rsync -av --delete "$TMP_DIR/" "$NAS_THEME_PATH/"
+          rm -rf "$TMP_DIR"
+
+          echo "✅ Theme deployed to $NAS_THEME_PATH"
+          ls -la "$NAS_THEME_PATH"
+          ENDSSH
+
+      - name: Flush WordPress cache
+        run: |
+          NAS_USER="${{ secrets.NAS_USER }}"
+          NAS_HOST="${{ secrets.NAS_HOST }}"
+          NAS_PORT="${{ secrets.NAS_SSH_PORT }}"
+
+          ssh -p "$NAS_PORT" "$NAS_USER@$NAS_HOST" << 'ENDSSH'
+          cd /volume1/docker/trust-code
+          docker-compose -f docker-compose.production.yml --env-file .env.production exec -T wordpress wp cache flush --allow-root || true
+          docker-compose -f docker-compose.production.yml --env-file .env.production exec -T wordpress wp rewrite flush --allow-root || true
+          echo "✅ WordPress cache flushed"
+          ENDSSH
+
+  # ========================================
+  # Dockerイメージの更新（NAS）
+  # ========================================
+  deploy-docker:
+    name: Deploy Docker to NAS
+    runs-on: ubuntu-latest
+    needs: [detect-changes, build-docker]
+    if: |
+      needs.detect-changes.outputs.docker == 'true' ||
+      needs.detect-changes.outputs.compose == 'true' ||
+      github.event.inputs.force_docker_rebuild == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:github-actions
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.NAS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p ${{ secrets.NAS_SSH_PORT }} -H ${{ secrets.NAS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Deploy Docker files to NAS
+        run: |
+          NAS_USER="${{ secrets.NAS_USER }}"
+          NAS_HOST="${{ secrets.NAS_HOST }}"
+          NAS_PORT="${{ secrets.NAS_SSH_PORT }}"
+          NAS_PROJECT_PATH="/volume1/docker/trust-code"
+          TMP_DIR="/tmp/trust-code-deploy-$(date +%s)"
+
+          echo "📦 Creating temporary directory on NAS..."
+          ssh -p "$NAS_PORT" "$NAS_USER@$NAS_HOST" "rm -rf '$TMP_DIR' && mkdir -p '$TMP_DIR'"
+
+          echo "📤 Transferring Docker files to NAS..."
+          COPYFILE_DISABLE=1 tar \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='.env' \
+            --exclude='.env.local' \
+            --no-xattrs --no-mac-metadata --no-acls --no-fflags \
+            -cf - \
+            docker-compose.yml \
+            docker-compose.production.yml \
+            wordpress/Dockerfile \
+            wordpress/docker-entrypoint-wrapper.sh \
+            wordpress/init-wordpress.sh \
+            nginx/ \
+            php/ \
+          | ssh -p "$NAS_PORT" "$NAS_USER@$NAS_HOST" "tar -C '$TMP_DIR' -xpf -"
+
+          echo "🔄 Moving files to production directory..."
+          ssh -p "$NAS_PORT" "$NAS_USER@$NAS_HOST" << ENDSSH
+          # docker-compose.ymlとDocker関連ファイルを更新
+          rsync -av "$TMP_DIR/docker-compose.yml" "$NAS_PROJECT_PATH/"
+          rsync -av "$TMP_DIR/docker-compose.production.yml" "$NAS_PROJECT_PATH/"
+
+          # wordpress/ディレクトリを更新
+          mkdir -p "$NAS_PROJECT_PATH/wordpress"
+          rsync -av "$TMP_DIR/wordpress/" "$NAS_PROJECT_PATH/wordpress/"
+
+          # nginx/, php/ディレクトリを更新
+          rsync -av --delete "$TMP_DIR/nginx/" "$NAS_PROJECT_PATH/nginx/"
+          rsync -av --delete "$TMP_DIR/php/" "$NAS_PROJECT_PATH/php/"
+
+          rm -rf "$TMP_DIR"
+          echo "✅ Docker files deployed"
+          ENDSSH
+
+      - name: Pull latest image and restart containers
+        run: |
+          NAS_USER="${{ secrets.NAS_USER }}"
+          NAS_HOST="${{ secrets.NAS_HOST }}"
+          NAS_PORT="${{ secrets.NAS_SSH_PORT }}"
+
+          ssh -p "$NAS_PORT" "$NAS_USER@$NAS_HOST" << 'ENDSSH'
+          cd /volume1/docker/trust-code
+
+          echo "🐳 Pulling latest WordPress image..."
+          docker pull akirakano1101/trust-code-wordpress:latest
+
+          echo "⏹️  Stopping containers..."
+          docker-compose -f docker-compose.production.yml --env-file .env.production down || true
+
+          echo "🧹 Cleaning up..."
+          docker container prune -f
+          docker image prune -f
+
+          echo "🚀 Starting containers..."
+          docker-compose -f docker-compose.production.yml --env-file .env.production up -d
+
+          echo "📊 Container status:"
+          docker-compose -f docker-compose.production.yml --env-file .env.production ps
+          ENDSSH
+
+      - name: Verify deployment
+        run: |
+          NAS_USER="${{ secrets.NAS_USER }}"
+          NAS_HOST="${{ secrets.NAS_HOST }}"
+          NAS_PORT="${{ secrets.NAS_SSH_PORT }}"
+
+          ssh -p "$NAS_PORT" "$NAS_USER@$NAS_HOST" << 'ENDSSH'
+          echo "=== Container Status ==="
+          docker ps | grep trust-code || docker ps
+
+          echo ""
+          echo "=== WordPress Container Logs (last 20 lines) ==="
+          docker logs --tail 20 wp-app 2>&1 || echo "Container not found or not running"
+
+          echo ""
+          echo "=== Nginx Container Logs (last 20 lines) ==="
+          docker logs --tail 20 wp-nginx 2>&1 || echo "Container not found or not running"
+          ENDSSH
+
+  # ========================================
+  # デプロイ完了通知
+  # ========================================
+  notify:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [detect-changes, build-theme, build-docker, deploy-theme, deploy-docker]
+    if: always()
+
+    steps:
+      - name: Summary
+        run: |
+          echo "## 🎉 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Theme Build | ${{ needs.build-theme.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Build | ${{ needs.build-docker.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Theme Deploy | ${{ needs.deploy-theme.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Deploy | ${{ needs.deploy-docker.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Site URL**: https://trust-code.net" >> $GITHUB_STEP_SUMMARY
